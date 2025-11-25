@@ -33,8 +33,10 @@ fi
 
 echo -e "${GREEN}✅ npm authentication verified${NC}"
 
-# Get current version
+# Get package name and current version
+PACKAGE_NAME=$(node -p "require('./package.json').name")
 CURRENT_VERSION=$(node -p "require('./package.json').version")
+echo -e "📦 Package: ${GREEN}${PACKAGE_NAME}${NC}"
 echo -e "📦 Current version: ${GREEN}${CURRENT_VERSION}${NC}"
 
 # Ask for version bump type
@@ -125,7 +127,7 @@ npm pack --dry-run
 # Confirm publish
 echo ""
 echo -e "${YELLOW}⚠️  You are about to publish:${NC}"
-echo -e "   Package: @ai-command-mgmt/mcp-server"
+echo -e "   Package: ${GREEN}${PACKAGE_NAME}${NC}"
 echo -e "   Version: ${GREEN}${NEW_VERSION}${NC}"
 echo -e "   Registry: $(npm config get registry)"
 read -p "Continue with publish? (y/n): " CONFIRM
@@ -144,7 +146,7 @@ npm publish --access public || {
 }
 
 echo ""
-echo -e "${GREEN}🎉 Successfully published @ai-command-mgmt/mcp-server@${NEW_VERSION}!${NC}"
+echo -e "${GREEN}🎉 Successfully published ${PACKAGE_NAME}@${NEW_VERSION}!${NC}"
 echo ""
 echo "Next steps:"
 echo "  1. Commit and push version bump: git add package.json && git commit -m 'Bump version to ${NEW_VERSION}' && git push"
@@ -153,5 +155,5 @@ echo "  3. Update CHANGELOG.md with release notes"
 echo "  4. Create GitHub release (optional)"
 echo ""
 echo "Installation command:"
-echo -e "  ${GREEN}npm install @ai-command-mgmt/mcp-server@${NEW_VERSION}${NC}"
+echo -e "  ${GREEN}npm install ${PACKAGE_NAME}@${NEW_VERSION}${NC}"
 
