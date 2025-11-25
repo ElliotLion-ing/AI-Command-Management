@@ -1,6 +1,6 @@
 {
   "name": "@elliotding/ai-command-tool-mcp",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MCP server for intelligent command discovery and execution from remote repositories",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -68,4 +68,3 @@
     "vitest": "^1.0.0"
   }
 }
-

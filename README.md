@@ -36,7 +36,13 @@ ACMT is a Model Context Protocol (MCP) server that provides intelligent search a
 ### Install from npm
 
 ```bash
-npm install @ai-command-mgmt/mcp-server
+npm install @elliotding/ai-command-tool-mcp
+```
+
+或全局安装（推荐用于 MCP 服务器）：
+
+```bash
+npm install -g @elliotding/ai-command-tool-mcp
 ```
 
 ### Prerequisites
