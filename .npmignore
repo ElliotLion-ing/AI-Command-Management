@@ -1,0 +1,44 @@
+# Source files
+src/
+tests/
+examples/
+
+# User data directories (must not be uploaded!)
+Commands/
+Commands-Analyze-Report/
+.ai-command-tool.json
+
+# Config files
+tsconfig.json
+.eslintrc.js
+vitest.config.ts
+.gitignore
+
+# Development files
+*.test.ts
+*.spec.ts
+test-mcp.js
+test-simple.sh
+TESTING.md
+TEST-RESULTS.md
+.vscode/
+.idea/
+
+# Build artifacts
+*.tsbuildinfo
+coverage/
+
+# Documentation (except README)
+docs/
+specs/
+.specify/
+.cursor/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Misc
+*.log
+.DS_Store
+

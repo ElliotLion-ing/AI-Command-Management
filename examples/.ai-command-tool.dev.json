@@ -1,0 +1,12 @@
+{
+  "$schema": "Development configuration for local testing",
+  "commands_directory": "./tests/fixtures/Commands",
+  "reports_directory": "./tests/fixtures/Commands-Analyze-Report",
+  "cache_ttl_seconds": 300,
+  "max_search_results": 10,
+  "search_timeout_ms": 5000,
+  "enable_cache": false,
+  "report_link_base_url": "",
+  "log_level": "debug"
+}
+

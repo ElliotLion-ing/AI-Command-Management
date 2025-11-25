@@ -1,50 +1,134 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Project Constitution
+
+<!--
+Sync Impact Report:
+- Version: 0.0.1 (Initial)
+- Created: 2025-11-25
+- Principles: 6 core principles established
+- Templates: To be created
+- Status: Initial constitution for AI-Command-Tool-Management
+-->
+
+## Metadata
+
+- **Project Name**: AI-Command-Tool-Management
+- **Constitution Version**: 0.0.1
+- **Ratification Date**: 2025-11-25
+- **Last Amended Date**: 2025-11-25
+
+## Purpose
+
+AI-Command-Tool-Management is an MCP (Model Context Protocol) tool designed to manage, discover, and remotely execute command definitions stored as Markdown files. The tool enables users to search and invoke commands without copying them to their local workspace, providing intelligent search capabilities across command definitions and historical analysis reports.
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Principle 1: Remote-First Command Management
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**Name**: Remote Command Access
+**Rules**:
+- Commands MUST be stored and managed on a remote server
+- Users MUST be able to discover and execute commands without local copies
+- The MCP tool MUST access remote command directories at runtime
+- Command execution MUST behave identically to local command execution
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: Centralized command management eliminates version inconsistencies and reduces workspace clutter while maintaining full functionality.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### Principle 2: Intelligent Multi-Layer Search
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+**Name**: Smart Command Discovery
+**Rules**:
+- Search MUST follow a three-tier priority system:
+  1. **Primary**: Keyword matching against command file names
+  2. **Secondary**: Content analysis of command Markdown files
+  3. **Tertiary**: Analysis of historical report content
+- Search results MUST be ranked by relevance
+- Users MUST be presented with selectable options when multiple matches exist
+- Search MUST support both exact name matching and fuzzy description queries
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Rationale**: Multi-layer search ensures users can find commands whether they know the exact name or only have a general description of their needs.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### Principle 3: NPM Package Distribution
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Name**: Standard Package Distribution
+**Rules**:
+- The tool MUST be packaged as a publishable npm package
+- The package MUST NOT include user-uploaded commands or reports
+- The package MUST include all necessary runtime dependencies
+- A publish.sh script MUST be provided for deployment automation
+- The package MUST support installation on remote MCP servers
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Rationale**: NPM distribution provides standard, versioned deployment that integrates seamlessly with the MCP ecosystem.
+
+### Principle 4: Structured Command and Report Organization
+
+**Name**: Consistent Directory Structure
+**Rules**:
+- Commands MUST be stored in a `Commands/` directory as `.md` files
+- Reports MUST be stored in a `Commands-Analyze-Report/` directory
+- Each command's reports MUST be in a subdirectory named `{command-name}-reports/`
+- The tool MUST support configurable paths to these directories
+- Directory structure MUST be:
+  ```
+  Commands/
+    └── command_name.md
+  Commands-Analyze-Report/
+    └── command_name-reports/
+        └── report_YYYYMMDD.md
+  ```
+
+**Rationale**: Consistent structure enables reliable automated discovery and association between commands and their historical reports.
+
+### Principle 5: Transparent Command Invocation
+
+**Name**: Seamless Execution Experience
+**Rules**:
+- Command invocation through MCP MUST match local `.cursor/commands` behavior
+- Users MUST receive command descriptions before selection
+- Selected commands MUST be executed with full context
+- The tool MUST provide clear feedback during search and execution
+- Commands MUST support both direct invocation (by exact name) and discovery mode (by description)
+
+**Rationale**: Maintaining behavioral parity with local commands ensures zero learning curve for users familiar with Cursor's command system.
+
+### Principle 6: Report Discovery and Access
+
+**Name**: Historical Report Search
+**Rules**:
+- Users MUST be able to search reports across all commands or within specific command scopes
+- Report search MUST support content-based queries
+- Search results MUST include report links generated by the storage server
+- The tool MUST distinguish between command-specific and global report searches
+- Report metadata (date, command name) MUST be extractable from file paths
+
+**Rationale**: Access to historical reports helps users learn from past analyses and avoid duplicate work.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Amendment Process
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+1. Proposed changes must be documented with rationale
+2. Version bumps follow semantic versioning:
+   - **MAJOR**: Breaking changes to core principles or architecture
+   - **MINOR**: New principles or significant principle expansions
+   - **PATCH**: Clarifications, wording improvements, non-semantic fixes
+3. All dependent templates and documentation must be updated before ratification
+4. Amendment date must be updated in metadata
+
+### Compliance Review
+
+- Implementation MUST be validated against all six principles
+- Each major feature MUST map to at least one principle
+- Violations MUST be documented and justified or corrected
+- Regular audits SHOULD be performed as the project evolves
+
+### Versioning Policy
+
+- Constitution versions are independent of software versions
+- Each amendment increments the version according to semantic versioning
+- Historical versions SHOULD be preserved for reference
+- Breaking principle changes require coordination with active development
+
+---
+
+**End of Constitution v0.0.1**
+

@@ -1,0 +1,71 @@
+{
+  "name": "@elliotding/ai-command-tool-mcp",
+  "version": "0.0.1",
+  "description": "MCP server for intelligent command discovery and execution from remote repositories",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "ai-command-tool": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --clean",
+    "dev": "tsup src/index.ts --format cjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "command-management",
+    "cursor",
+    "ai-tools",
+    "command-discovery",
+    "intelligent-search"
+  ],
+  "author": "AI Command Management Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ai-command-mgmt/mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/ai-command-mgmt/mcp-server/issues"
+  },
+  "homepage": "https://github.com/ai-command-mgmt/mcp-server#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "fuse.js": "^7.0.0",
+    "marked": "^12.0.0",
+    "cosmiconfig": "^9.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
+
