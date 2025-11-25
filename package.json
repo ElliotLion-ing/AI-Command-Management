@@ -37,16 +37,16 @@
     "command-discovery",
     "intelligent-search"
   ],
-  "author": "AI Command Management Team",
+  "author": "ElliotLion-ing",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ai-command-mgmt/mcp-server"
+    "url": "git+https://github.com/ElliotLion-ing/AI-Command-Management.git"
   },
   "bugs": {
-    "url": "https://github.com/ai-command-mgmt/mcp-server/issues"
+    "url": "https://github.com/ElliotLion-ing/AI-Command-Management/issues"
   },
-  "homepage": "https://github.com/ai-command-mgmt/mcp-server#readme",
+  "homepage": "https://github.com/ElliotLion-ing/AI-Command-Management#readme",
   "engines": {
     "node": ">=18.0.0"
   },

@@ -260,8 +260,8 @@ MIT License - see LICENSE file for details
 
 ## 🙋 Support
 
-- **Issues**: [GitHub Issues](https://github.com/ai-command-mgmt/mcp-server/issues)
-- **Documentation**: [Full Documentation](https://github.com/ai-command-mgmt/mcp-server/wiki)
+- **Issues**: [GitHub Issues](https://github.com/ElliotLion-ing/AI-Command-Management/issues)
+- **Documentation**: [Full Documentation](https://github.com/ElliotLion-ing/AI-Command-Management)
 
 ## 📊 Status
 
