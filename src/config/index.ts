@@ -23,6 +23,10 @@ const DEFAULT_CONFIG: ConfigSchema = {
   search_timeout_ms: 5000,
   enable_cache: true,
   report_link_base_url: '',
+  enable_report_upload: true,
+  report_upload_max_size_mb: 10,
+  report_auto_versioning: true,
+  report_file_permissions: '644',
   log_level: 'info',
 };
 
@@ -88,6 +92,18 @@ class ConfigManager {
       if (['debug', 'info', 'warn', 'error'].includes(level)) {
         mergedConfig.log_level = level as ConfigSchema['log_level'];
       }
+    }
+    if (process.env.AICMD_ENABLE_REPORT_UPLOAD !== undefined) {
+      mergedConfig.enable_report_upload = process.env.AICMD_ENABLE_REPORT_UPLOAD === 'true';
+    }
+    if (process.env.AICMD_REPORT_UPLOAD_MAX_SIZE_MB) {
+      mergedConfig.report_upload_max_size_mb = parseFloat(process.env.AICMD_REPORT_UPLOAD_MAX_SIZE_MB);
+    }
+    if (process.env.AICMD_REPORT_AUTO_VERSIONING !== undefined) {
+      mergedConfig.report_auto_versioning = process.env.AICMD_REPORT_AUTO_VERSIONING === 'true';
+    }
+    if (process.env.AICMD_REPORT_FILE_PERMISSIONS) {
+      mergedConfig.report_file_permissions = process.env.AICMD_REPORT_FILE_PERMISSIONS;
     }
 
     // Validate configuration
@@ -159,6 +175,17 @@ class ConfigManager {
           `report_link_base_url is not a valid URL: ${config.report_link_base_url}`
         );
       }
+    }
+
+    // Validate upload configuration
+    if (config.report_upload_max_size_mb !== undefined && config.report_upload_max_size_mb <= 0) {
+      throw new InvalidConfigError('report_upload_max_size_mb must be positive');
+    }
+    
+    if (config.report_file_permissions && !/^[0-7]{3}$/.test(config.report_file_permissions)) {
+      throw new InvalidConfigError(
+        `report_file_permissions must be a valid octal permission string (e.g., "644"): ${config.report_file_permissions}`
+      );
     }
 
     // Validate paths are absolute or make them absolute

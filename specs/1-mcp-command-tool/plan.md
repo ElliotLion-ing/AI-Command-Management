@@ -880,6 +880,182 @@ function sanitizePath(path: string): string
 - Unit test: Sanitization
 - Security test: Directory traversal prevention
 
+---
+
+### Module 10: Report Uploader (`src/reports/uploader.ts`)
+
+**Purpose**: Handle report file uploads with validation, versioning, and atomic operations
+
+**Key Classes/Functions**:
+```typescript
+export class ReportUploader {
+  constructor(reportsDirectory: string, config: ReportUploadConfig)
+  async upload(input: UploadReportInput): Promise<UploadReportOutput>
+  private validateInput(input: UploadReportInput): void
+  private prepareReportDirectory(commandName: string): Promise<string>
+  private generateFileName(commandName: string, title?: string): string
+  private resolveVersionConflict(dir: string, fileName: string): Promise<string>
+  private writeFileAtomic(filePath: string, content: string): Promise<void>
+  private setFilePermissions(filePath: string): Promise<void>
+  private generateLink(filePath: string): string | undefined
+}
+
+interface UploadReportInput {
+  command_name: string;
+  report_content: string;
+  report_title?: string;
+}
+
+interface UploadReportOutput {
+  success: boolean;
+  report_path: string;
+  report_name: string;
+  report_link?: string;
+  message: string;
+  version?: number;
+}
+
+interface ReportUploadConfig {
+  enableUpload: boolean;
+  maxSizeMB: number;
+  autoVersioning: boolean;
+  filePermissions: string;
+  linkBaseUrl?: string;
+}
+```
+
+**Core Logic**:
+1. **Input Validation**:
+   - Command name format: `^[a-zA-Z0-9_-]+$`
+   - Content size check against configured limit
+   - UTF-8 encoding validation
+
+2. **Directory Management**:
+   - Check if `{command_name}-reports/` exists
+   - Create directory if needed (recursive)
+   - Security: Validate path stays within `reports_directory`
+
+3. **Filename Generation**:
+   - Format: `{command}_报告_{YYYYMMDD}_{HHmmss}_v1.md`
+   - Use server local timezone
+   - Sanitize custom titles if provided
+
+4. **Version Conflict Resolution**:
+   - Check if file exists
+   - Auto-increment version number (v1 → v2 → v3)
+   - Loop until unique filename found
+
+5. **Atomic Write**:
+   - Write to temporary file: `{filename}.tmp`
+   - Rename to final path (atomic on most filesystems)
+   - Clean up temp file on error
+
+6. **File Permissions**:
+   - Set configured permissions (default 644)
+   - Log warning if permission setting fails (don't fail upload)
+
+7. **Link Generation**:
+   - Generate HTTP link if `linkBaseUrl` configured
+   - Convert filesystem path to URL path
+   - Handle Windows path separators
+
+**Error Handling**:
+- `ReportUploadError` with specific error codes:
+  - `INVALID_COMMAND_NAME`
+  - `SIZE_LIMIT_EXCEEDED`
+  - `EMPTY_CONTENT`
+  - `PATH_TRAVERSAL_ATTEMPT`
+  - `DIRECTORY_PREPARATION_FAILED`
+  - `FILE_WRITE_FAILED`
+
+**Security Measures**:
+- Path traversal prevention (validate `startsWith`)
+- Command name sanitization
+- Size limits to prevent disk exhaustion
+- Atomic operations to prevent partial writes
+
+**Configuration**:
+```json
+{
+  "enable_report_upload": true,
+  "report_upload_max_size_mb": 10,
+  "report_auto_versioning": true,
+  "report_file_permissions": "644",
+  "report_link_base_url": "https://server.example.com/reports/"
+}
+```
+
+**Dependencies**:
+- `fs/promises` (Node.js built-in)
+- `path` (Node.js built-in)
+- `logger` (internal)
+- `types` (internal)
+
+**Testing**:
+- Unit test: Input validation (all error cases)
+- Unit test: Directory creation
+- Unit test: Filename generation with various inputs
+- Unit test: Version conflict resolution
+- Unit test: Atomic write operations
+- Unit test: Permission setting
+- Unit test: Security validations (path traversal, etc.)
+- Integration test: Real filesystem operations
+- Integration test: Concurrent uploads
+
+---
+
+### Module 11: Upload Report Tool Handler (`src/tools/upload-report.ts`)
+
+**Purpose**: MCP tool handler for upload_report requests
+
+**Key Functions**:
+```typescript
+export async function handleUploadReport(
+  input: UploadReportInput,
+  uploader: ReportUploader
+): Promise<UploadReportOutput | { error: unknown }>
+```
+
+**Tool Registration**:
+```typescript
+{
+  name: 'upload_report',
+  description: 'Upload a generated analysis report to the server for persistent storage',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      command_name: {
+        type: 'string',
+        description: 'Name of the command that generated the report',
+      },
+      report_content: {
+        type: 'string',
+        description: 'Full report content in Markdown format',
+      },
+      report_title: {
+        type: 'string',
+        description: 'Optional custom title for the report',
+      },
+    },
+    required: ['command_name', 'report_content'],
+  },
+}
+```
+
+**Dependencies**:
+- `ReportUploader` (Module 10)
+- `validators` (Module 9)
+- `errors` (Module 8)
+- `logger` (Module 7)
+
+**Testing**:
+- Unit test: Valid upload request
+- Unit test: Invalid command name
+- Unit test: Oversized content
+- Unit test: Empty content
+- Unit test: Error handling
+- Unit test: Output formatting
+
 ## Data Flow Diagrams
 
 ### Search Command Flow
@@ -980,13 +1156,89 @@ MCP Client
 User sees report results with links
 ```
 
+### Upload Report Flow
+```
+AI Agent generates report
+     ↓
+Agent prompts user for upload
+     ↓
+User responds: "是/保存"
+     ↓
+MCP Client (Cursor)
+     ↓ [MCP Protocol: upload_report(command_name, content)]
+MCP Server
+     ↓
+UploadReportHandler.handle()
+     ↓
+ReportUploader.upload()
+     ↓
+┌───────────────────────────────────┐
+│     Input Validation              │
+│  - Command name format            │
+│  - Content size check             │
+│  - UTF-8 encoding                 │
+└──────────┬────────────────────────┘
+           ↓
+┌───────────────────────────────────┐
+│  Prepare Directory                │
+│  - Check if exists                │
+│  - Create if needed               │
+│  - Security validation            │
+└──────────┬────────────────────────┘
+           ↓
+┌───────────────────────────────────┐
+│  Generate Filename                │
+│  - Timestamp (server local)       │
+│  - Format: {cmd}_报告_{ts}_v1.md  │
+└──────────┬────────────────────────┘
+           ↓
+┌───────────────────────────────────┐
+│  Version Conflict Resolution      │
+│  - Check if file exists           │
+│  - Increment version: v1→v2→v3    │
+└──────────┬────────────────────────┘
+           ↓
+┌───────────────────────────────────┐
+│  Atomic Write                     │
+│  1. Write to {file}.tmp           │
+│  2. Rename to final path          │
+│  3. Clean up temp on error        │
+└──────────┬────────────────────────┘
+           ↓
+┌───────────────────────────────────┐
+│  Set File Permissions             │
+│  - Apply configured perms (644)   │
+│  - Log warning if fails           │
+└──────────┬────────────────────────┘
+           ↓
+┌───────────────────────────────────┐
+│  Generate Link (if configured)    │
+│  - Convert path to URL            │
+│  - Return UploadReportOutput      │
+└──────────┬────────────────────────┘
+           ↓
+Format Response
+     ↓
+[MCP Protocol Response]
+     ↓
+MCP Client
+     ↓
+Agent confirms success to user
+     ↓
+User sees:
+  ✅ Report saved
+  📁 Path: /opt/acmt/.../report.md
+  🔗 Link: https://...
+```
+
 ## Build & Packaging
 
 ### Project Structure
 ```
 ai-command-tool-management/
 ├── src/
-│   ├── index.ts                    # MCP server entry point
+│   ├── index.ts                    # MCP server entry point (stdio)
+│   ├── index-sse.ts                # MCP server entry point (SSE)
 │   ├── config/
 │   │   └── index.ts                # Configuration management
 │   ├── tools/
@@ -994,13 +1246,19 @@ ai-command-tool-management/
 │   │   ├── get-command.ts          # Tool handler
 │   │   ├── list-commands.ts        # Tool handler
 │   │   ├── search-reports.ts       # Tool handler
-│   │   └── list-command-reports.ts # Tool handler
+│   │   ├── list-command-reports.ts # Tool handler
+│   │   └── upload-report.ts        # Tool handler (NEW)
 │   ├── search/
 │   │   ├── index.ts                # Search orchestrator
 │   │   ├── tier1-filename.ts       # Filename search
 │   │   ├── tier2-content.ts        # Content search
 │   │   └── tier3-reports.ts        # Report search
 │   ├── commands/
+│   │   └── loader.ts               # Command loader
+│   ├── reports/
+│   │   ├── finder.ts               # Report finder
+│   │   ├── linker.ts               # Report linker
+│   │   └── uploader.ts             # Report uploader (NEW)
 │   │   └── loader.ts               # Command file operations
 │   ├── reports/
 │   │   ├── finder.ts               # Report file operations

@@ -584,7 +584,153 @@
 
 **Files to Create**:
 - `src/index.ts`
+- `src/index-sse.ts`
 - `tests/integration/server.test.ts`
+
+---
+
+### Task 2.14: Implement Report Uploader Module
+**Priority**: P1
+**Estimated Time**: 4 hours
+**Dependencies**: Task 2.7 (Report Infrastructure), Task 1.4 (Configuration)
+
+**Subtasks**:
+- [ ] Create `src/reports/uploader.ts`
+- [ ] Implement `ReportUploader` class with constructor
+- [ ] Implement input validation (command name, size, encoding)
+- [ ] Implement directory management (create if not exists)
+- [ ] Implement filename generation with timestamp
+- [ ] Implement version conflict resolution (v1 → v2 → v3)
+- [ ] Implement atomic write operations (temp → rename)
+- [ ] Implement file permission setting
+- [ ] Implement link generation (if base URL configured)
+- [ ] Add comprehensive error handling
+- [ ] Add logging for all operations
+- [ ] Security: Path traversal prevention
+- [ ] Export `ReportUploader` class and interfaces
+
+**Acceptance Criteria**:
+- Uploads report to existing command directory
+- Auto-creates directory for new commands
+- Version numbers increment automatically on conflicts
+- Atomic writes prevent partial files
+- Security validations prevent path traversal
+- Error messages clear and actionable
+- All methods have proper TypeScript types
+- JSDoc comments for all public methods
+
+**Files to Create**:
+- `src/reports/uploader.ts`
+
+---
+
+### Task 2.15: Implement Upload Report Tool Handler
+**Priority**: P1
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.14
+
+**Subtasks**:
+- [ ] Create `src/tools/upload-report.ts`
+- [ ] Implement `handleUploadReport()` function
+- [ ] Add input validation using existing validators
+- [ ] Call `ReportUploader.upload()` method
+- [ ] Format output correctly
+- [ ] Handle `ReportUploadError` specifically
+- [ ] Add comprehensive logging
+- [ ] Export handler function
+- [ ] Update type definitions if needed
+
+**Acceptance Criteria**:
+- Handler validates inputs before calling uploader
+- Returns proper format (success/error)
+- Error responses include error codes and details
+- Logging comprehensive for debugging
+- Works with both stdio and SSE modes
+
+**Files to Create**:
+- `src/tools/upload-report.ts`
+
+---
+
+### Task 2.16: Register Upload Report Tool in MCP Server
+**Priority**: P1
+**Estimated Time**: 1 hour
+**Dependencies**: Task 2.15
+
+**Subtasks**:
+- [ ] Update `src/index.ts` (stdio mode):
+  - [ ] Initialize `ReportUploader` instance
+  - [ ] Add `upload_report` to ListTools response
+  - [ ] Add case to CallTool handler
+- [ ] Update `src/index-sse.ts` (SSE mode):
+  - [ ] Initialize `ReportUploader` instance
+  - [ ] Add `upload_report` to ListTools response
+  - [ ] Add case to CallTool handler
+- [ ] Define precise inputSchema for upload_report
+- [ ] Test tool registration in both modes
+
+**Acceptance Criteria**:
+- Tool appears in tool list (both modes)
+- Tool callable via MCP protocol (both modes)
+- Input schema validated correctly
+- Integration works end-to-end
+
+**Files to Modify**:
+- `src/index.ts`
+- `src/index-sse.ts`
+
+---
+
+### Task 2.17: Add Upload Configuration Options
+**Priority**: P1
+**Estimated Time**: 1 hour
+**Dependencies**: Task 1.4
+
+**Subtasks**:
+- [ ] Update `src/config/index.ts`:
+  - [ ] Add `enable_report_upload` (boolean, default: true)
+  - [ ] Add `report_upload_max_size_mb` (number, default: 10)
+  - [ ] Add `report_auto_versioning` (boolean, default: true)
+  - [ ] Add `report_file_permissions` (string, default: '644')
+  - [ ] Add `report_link_base_url` (string, optional)
+- [ ] Update configuration schema
+- [ ] Update environment variable support
+- [ ] Update `examples/.ai-command-tool.json`
+
+**Acceptance Criteria**:
+- Configuration loads with new fields
+- Defaults applied when fields omitted
+- Environment variables override config file
+- Example config includes comments
+
+**Files to Modify**:
+- `src/config/index.ts`
+- `src/types/index.ts`
+- `examples/.ai-command-tool.json`
+
+---
+
+### Task 2.18: Add Upload Type Definitions
+**Priority**: P1
+**Estimated Time**: 30 minutes
+**Dependencies**: None
+
+**Subtasks**:
+- [ ] Update `src/types/index.ts`:
+  - [ ] Add `UploadReportInput` interface
+  - [ ] Add `UploadReportOutput` interface
+  - [ ] Add `ReportUploadConfig` interface
+  - [ ] Add `ReportUploadError` class
+- [ ] Export all new types
+- [ ] Add JSDoc comments
+
+**Acceptance Criteria**:
+- TypeScript compiles without errors
+- Types properly documented
+- All fields have appropriate types
+
+**Files to Modify**:
+- `src/types/index.ts`
 
 ---
 
@@ -616,7 +762,7 @@
 ### Task 3.2: Integration Testing
 **Priority**: P0
 **Estimated Time**: 3 hours
-**Dependencies**: Task 2.14
+**Dependencies**: Task 2.13
 
 **Subtasks**:
 - [ ] Test full MCP protocol flow
@@ -632,6 +778,66 @@
 
 **Files to Create/Update**:
 - `tests/integration/*.test.ts`
+
+---
+
+### Task 3.2a: Upload Report Unit Tests
+**Priority**: P1
+**Estimated Time**: 3 hours
+**Dependencies**: Task 2.14, Task 2.15
+
+**Subtasks**:
+- [ ] Create `tests/unit/reports/uploader.test.ts`
+- [ ] Test input validation (all failure cases)
+- [ ] Test directory creation
+- [ ] Test filename generation with various inputs
+- [ ] Test version conflict resolution
+- [ ] Test atomic file write operations
+- [ ] Test permission setting
+- [ ] Test link generation
+- [ ] Test security validations (path traversal, etc.)
+- [ ] Create `tests/unit/tools/upload-report.test.ts`
+- [ ] Test valid upload request
+- [ ] Test invalid command name
+- [ ] Test oversized content
+- [ ] Test empty content
+- [ ] Test error handling
+- [ ] Test output formatting
+
+**Acceptance Criteria**:
+- Code coverage >90% for upload modules
+- All edge cases tested
+- Security tests pass (path traversal, etc.)
+- All tests pass
+
+**Files to Create**:
+- `tests/unit/reports/uploader.test.ts`
+- `tests/unit/tools/upload-report.test.ts`
+
+---
+
+### Task 3.2b: Upload Report Integration Tests
+**Priority**: P1
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.16
+
+**Subtasks**:
+- [ ] Test full upload workflow (stdio mode)
+- [ ] Test full upload workflow (SSE mode)
+- [ ] Test with real filesystem operations
+- [ ] Test concurrent uploads
+- [ ] Test filesystem error scenarios (no permission, disk full)
+- [ ] Test configuration loading
+- [ ] Test version conflict in real scenario
+
+**Acceptance Criteria**:
+- End-to-end tests pass
+- Real filesystem tested
+- Concurrency safe
+- Error scenarios handled gracefully
+
+**Files to Create**:
+- `tests/integration/upload-report.test.ts`
 
 ---
 
@@ -696,24 +902,32 @@
 
 ### Task 4.2: Create README.md
 **Priority**: P0
-**Estimated Time**: 2 hours
-**Dependencies**: Task 2.14
+**Estimated Time**: 2.5 hours
+**Dependencies**: Task 2.16
 
 **Subtasks**:
 - [ ] Write overview and purpose
 - [ ] Document installation instructions
-- [ ] Document configuration options
+- [ ] Document configuration options (including upload config)
 - [ ] Provide usage examples
-- [ ] Document all 5 MCP tools with examples
+- [ ] Document all 6 MCP tools with examples:
+  - [ ] search_commands
+  - [ ] get_command
+  - [ ] list_commands
+  - [ ] search_reports
+  - [ ] list_command_reports
+  - [ ] upload_report (NEW)
 - [ ] Add troubleshooting section
 - [ ] Add development instructions
 - [ ] Add license and contribution guidelines
+- [ ] Document upload workflow for AI agents
 
 **Acceptance Criteria**:
 - README is comprehensive and clear
 - All code examples are tested and work
 - Installation steps are accurate
-- Configuration options documented
+- All configuration options documented (including upload settings)
+- Upload workflow clearly explained
 
 **Files to Create**:
 - `README.md`

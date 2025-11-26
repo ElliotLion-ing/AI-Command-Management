@@ -147,6 +147,50 @@ An MCP tool that:
 - Each report shows: date, file size, brief summary
 - User can navigate to reports directly from list
 
+### Scenario 5: Report Upload After Analysis
+**User Goal**: Save AI-generated analysis report to server for future reference
+
+**Flow**:
+1. AI agent completes analysis using `analyze_zoom_speech_sdk_log` command
+2. Agent generates comprehensive analysis report
+3. Agent detects report generation and prompts user:
+   ```
+   📊 分析完成！报告已生成。
+   
+   关键发现：Token 获取超时 (WinHTTP 超时占 93.2% 延迟)
+   
+   💾 是否保存此报告到服务器？
+   保存位置：Commands-Analyze-Report/analyze_zoom_speech_sdk_log-reports/
+   文件名：analyze_zoom_speech_sdk_log_报告_20251126_143022_v1.md
+   
+   回复 "是/保存" 保存报告，或 "否/不保存" 跳过。
+   ```
+4. User responds: "是"
+5. Agent calls `upload_report` tool with report content and command name
+6. System creates report directory if first-time upload for this command
+7. System generates timestamped filename with version number
+8. System writes report file atomically
+9. Agent confirms success:
+   ```
+   ✅ 报告已保存成功！
+   
+   📁 路径：Commands-Analyze-Report/analyze_zoom_speech_sdk_log-reports/analyze_zoom_speech_sdk_log_报告_20251126_143022_v1.md
+   🔗 链接：https://server.example.com/reports/...
+   
+   可通过以下方式查看：
+   - search_reports "Token timeout"
+   - list_command_reports "analyze_zoom_speech_sdk_log"
+   ```
+
+**Acceptance Criteria**:
+- Agent automatically prompts after report generation
+- Directory auto-created on first upload for command
+- Filename follows standard pattern with timestamp and version
+- Version auto-increments on conflicts (v1 → v2 → v3)
+- User can decline upload without error
+- Saved report immediately searchable via existing search tools
+- Error messages clear and actionable if upload fails
+
 ## Functional Requirements
 
 ### FR1: Multi-Tier Command Search
@@ -258,7 +302,67 @@ The system shall provide report search capabilities:
 - Test link generation for various report paths
 - Confirm chronological sorting
 
-### FR5: NPM Package Structure
+### FR5: Report Upload System
+**Priority**: P1 (High)
+
+The system shall provide report upload capabilities to persist AI-generated analysis reports:
+
+1. **upload_report(command_name: string, report_content: string, report_title?: string)**:
+   - Saves generated reports to server's `Commands-Analyze-Report/` directory
+   - Auto-creates command-specific subdirectories (`{command_name}-reports/`)
+   - Generates timestamped, versioned filenames: `{command}_报告_{YYYYMMDD}_{HHmmss}_v{N}.md`
+   - Returns: success status, file path, filename, optional link, version number
+
+**Requirements**:
+- **Directory Management**:
+  - Auto-create `{command_name}-reports/` directory if not exists
+  - Respect configured `reports_directory` base path
+  - Validate directory path security (prevent traversal attacks)
+  
+- **Filename Generation**:
+  - Format: `{command_name}_报告_{YYYYMMDD}_{HHmmss}_v{N}.md`
+  - Use server local timezone for timestamps
+  - Auto-increment version number on filename conflicts
+  
+- **Content Validation**:
+  - Verify command_name matches `^[a-zA-Z0-9_-]+$`
+  - Check content size against configured limit (default 10MB)
+  - Validate UTF-8 encoding
+  
+- **File Operations**:
+  - Write with UTF-8 encoding
+  - Use atomic write operations (write to temp, then rename)
+  - Set appropriate file permissions (default 644)
+  - Log all uploads with timestamp
+  
+- **Error Handling**:
+  - Handle permission errors gracefully
+  - Detect disk space issues before write
+  - Provide specific, actionable error messages
+  - Never leave partial files on error
+
+**Configuration**:
+```json
+{
+  "enable_report_upload": true,
+  "report_upload_max_size_mb": 10,
+  "report_auto_versioning": true,
+  "report_file_permissions": "644",
+  "report_link_base_url": "https://server.example.com/reports/"
+}
+```
+
+**Testing**:
+- Upload to existing command directory
+- Upload to new command (auto-create directory)
+- Version conflict handling (multiple uploads same timestamp)
+- Large file rejection (exceed size limit)
+- Permission denied error handling
+- Path traversal attack prevention
+- Concurrent upload safety
+- Invalid command name rejection
+
+### FR6: NPM Package Structure
 **Priority**: P0 (Critical)
 
 The system shall be packaged as a standard npm package:

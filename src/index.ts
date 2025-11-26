@@ -18,12 +18,14 @@ import { handleError } from './utils/errors';
 import { CommandLoader } from './commands/loader';
 import { ReportFinder } from './reports/finder';
 import { ReportLinker } from './reports/linker';
+import { ReportUploader } from './reports/uploader';
 import { SearchEngine } from './search';
 import { handleSearchCommands } from './tools/search-commands';
 import { handleGetCommand } from './tools/get-command';
 import { handleListCommands } from './tools/list-commands';
 import { handleSearchReports } from './tools/search-reports';
 import { handleListCommandReports } from './tools/list-command-reports';
+import { handleUploadReport } from './tools/upload-report';
 
 /**
  * Main server class
@@ -33,6 +35,7 @@ class ACMTServer {
   private commandLoader!: CommandLoader;
   private reportFinder!: ReportFinder;
   private reportLinker!: ReportLinker;
+  private reportUploader!: ReportUploader;
   private searchEngine!: SearchEngine;
   private config!: Awaited<ReturnType<typeof getConfig>>;
 
@@ -82,6 +85,17 @@ class ACMTServer {
       this.reportLinker = new ReportLinker(
         this.config.reports_directory,
         this.config.report_link_base_url
+      );
+
+      this.reportUploader = new ReportUploader(
+        this.config.reports_directory,
+        {
+          enableUpload: this.config.enable_report_upload ?? true,
+          maxSizeMB: this.config.report_upload_max_size_mb ?? 10,
+          autoVersioning: this.config.report_auto_versioning ?? true,
+          filePermissions: this.config.report_file_permissions ?? '644',
+          linkBaseUrl: this.config.report_link_base_url,
+        }
       );
 
       this.searchEngine = new SearchEngine(
@@ -191,6 +205,28 @@ class ACMTServer {
               required: ['command_name'],
             },
           },
+          {
+            name: 'upload_report',
+            description: 'Upload a generated analysis report to the server for persistent storage. Allows optional custom report name from user.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                command_name: {
+                  type: 'string',
+                  description: 'Name of the command that generated the report (e.g., "analyze_zoom_speech_sdk_log")',
+                },
+                report_content: {
+                  type: 'string',
+                  description: 'Full report content in Markdown format',
+                },
+                report_name: {
+                  type: 'string',
+                  description: 'Optional custom name for the report (user-provided). If not provided, uses default format: {command}_报告_{timestamp}_v1.md',
+                },
+              },
+              required: ['command_name', 'report_content'],
+            },
+          },
         ],
       };
     });
@@ -236,6 +272,13 @@ class ACMTServer {
               args as never,
               this.reportFinder,
               this.reportLinker
+            );
+            break;
+
+          case 'upload_report':
+            result = await handleUploadReport(
+              args as never,
+              this.reportUploader
             );
             break;
 

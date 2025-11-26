@@ -19,6 +19,12 @@ export interface ConfigSchema {
   // External services
   report_link_base_url: string;
   
+  // Report upload settings
+  enable_report_upload?: boolean;
+  report_upload_max_size_mb?: number;
+  report_auto_versioning?: boolean;
+  report_file_permissions?: string;
+  
   // Logging
   log_level: 'debug' | 'info' | 'warn' | 'error';
 }
@@ -214,6 +220,49 @@ export class FileSystemError extends Error {
   constructor(message: string, public readonly path?: string) {
     super(message);
     this.name = 'FileSystemError';
+  }
+}
+
+/**
+ * MCP tool definition for upload_report
+ */
+export interface UploadReportInput {
+  command_name: string;
+  report_content: string;
+  report_name?: string; // Optional custom report name from user
+}
+
+export interface UploadReportOutput {
+  success: boolean;
+  report_path: string;
+  report_name: string;
+  report_link?: string;
+  message: string;
+  version?: number;
+}
+
+/**
+ * Report upload configuration
+ */
+export interface ReportUploadConfig {
+  enableUpload: boolean;
+  maxSizeMB: number;
+  autoVersioning: boolean;
+  filePermissions: string;
+  linkBaseUrl?: string;
+}
+
+/**
+ * Report upload error with specific error codes
+ */
+export class ReportUploadError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly details?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = 'ReportUploadError';
   }
 }
 

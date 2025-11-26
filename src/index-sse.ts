@@ -20,12 +20,14 @@ import { handleError } from './utils/errors.js';
 import { CommandLoader } from './commands/loader.js';
 import { ReportFinder } from './reports/finder.js';
 import { ReportLinker } from './reports/linker.js';
+import { ReportUploader } from './reports/uploader.js';
 import { SearchEngine } from './search/index.js';
 import { handleSearchCommands } from './tools/search-commands.js';
 import { handleGetCommand } from './tools/get-command.js';
 import { handleListCommands } from './tools/list-commands.js';
 import { handleSearchReports } from './tools/search-reports.js';
 import { handleListCommandReports } from './tools/list-command-reports.js';
+import { handleUploadReport } from './tools/upload-report.js';
 
 /**
  * SSE Server class for remote MCP access
@@ -33,7 +35,7 @@ import { handleListCommandReports } from './tools/list-command-reports.js';
 class ACMTSSEServer {
   private httpServer: http.Server;
   private port: number;
-  private mcpServers: Map<string, Server> = new Map();
+  private transports: Map<string, SSEServerTransport> = new Map();
 
   constructor(port: number = 5090) {
     this.port = port;
@@ -62,9 +64,15 @@ class ACMTSSEServer {
       return;
     }
 
-    // SSE endpoint
+    // SSE endpoint - establish SSE stream (GET)
     if (url.pathname === '/sse' && req.method === 'GET') {
-      await this.handleSSE(res);
+      await this.handleSSEConnection(res);
+      return;
+    }
+
+    // Messages endpoint - receive client messages (POST)
+    if (url.pathname === '/message' && req.method === 'POST') {
+      await this.handleMessage(req, res);
       return;
     }
 
@@ -74,35 +82,89 @@ class ACMTSSEServer {
   }
 
   /**
-   * Handle SSE connections
+   * Handle SSE connection establishment
    */
-  private async handleSSE(
+  private async handleSSEConnection(
     res: http.ServerResponse
   ): Promise<void> {
     try {
-      logger.info('New SSE connection established');
+      logger.info('Establishing SSE stream');
 
-      // Create new MCP server instance for this connection
+      // Create new MCP server instance
       const server = await this.createMCPServer();
-      const clientId = `client-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      this.mcpServers.set(clientId, server);
 
-      // Create SSE transport
+      // Create SSE transport with message endpoint
       const transport = new SSEServerTransport('/message', res);
+      
+      // Store transport by session ID
+      const sessionId = transport.sessionId;
+      this.transports.set(sessionId, transport);
+
+      // Set up onclose handler
+      transport.onclose = () => {
+        logger.info(`SSE transport closed for session ${sessionId}`);
+        this.transports.delete(sessionId);
+      };
+
+      // Connect server to transport
       await server.connect(transport);
 
-      logger.info(`MCP Server connected for client: ${clientId}`);
+      logger.info(`SSE stream established with session ID: ${sessionId}`);
 
-      // Cleanup on connection close
-      res.on('close', () => {
-        logger.info(`SSE connection closed for client: ${clientId}`);
-        this.mcpServers.delete(clientId);
-        server.close().catch(console.error);
-      });
     } catch (error) {
-      logger.error('Error handling SSE connection', error as Error);
-      res.writeHead(500, { 'Content-Type': 'text/plain' });
-      res.end('Internal Server Error');
+      logger.error('Error establishing SSE stream', error as Error);
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error establishing SSE stream');
+      }
+    }
+  }
+
+  /**
+   * Handle incoming messages from client
+   */
+  private async handleMessage(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
+    try {
+      // Get session ID from query parameter
+      const url = new URL(req.url || '/', `http://${req.headers.host}`);
+      const sessionId = url.searchParams.get('sessionId');
+
+      if (!sessionId) {
+        logger.error('No session ID provided in request URL');
+        res.writeHead(400, { 'Content-Type': 'text/plain' });
+        res.end('Missing sessionId parameter');
+        return;
+      }
+
+      const transport = this.transports.get(sessionId);
+      if (!transport) {
+        logger.error(`No active transport found for session ID: ${sessionId}`);
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Session not found');
+        return;
+      }
+
+      // Read request body
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf-8')) as Record<string, unknown>;
+
+      logger.info(`Received message for session ${sessionId}`);
+
+      // Handle the POST message with the transport
+      await transport.handlePostMessage(req, res, body);
+
+    } catch (error) {
+      logger.error('Error handling message', error as Error);
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error handling message');
+      }
     }
   }
 
@@ -123,6 +185,16 @@ class ACMTSSEServer {
     const reportLinker = new ReportLinker(
       config.reports_directory,
       config.report_link_base_url
+    );
+    const reportUploader = new ReportUploader(
+      config.reports_directory,
+      {
+        enableUpload: config.enable_report_upload ?? true,
+        maxSizeMB: config.report_upload_max_size_mb ?? 10,
+        autoVersioning: config.report_auto_versioning ?? true,
+        filePermissions: config.report_file_permissions ?? '644',
+        linkBaseUrl: config.report_link_base_url,
+      }
     );
     const searchEngine = new SearchEngine(
       config.reports_directory,
@@ -206,6 +278,28 @@ class ACMTSSEServer {
               required: ['command_name'],
             },
           },
+          {
+            name: 'upload_report',
+            description: 'Upload a generated analysis report to the server for persistent storage. Allows optional custom report name from user.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                command_name: {
+                  type: 'string',
+                  description: 'Name of the command that generated the report (e.g., "analyze_zoom_speech_sdk_log")',
+                },
+                report_content: {
+                  type: 'string',
+                  description: 'Full report content in Markdown format',
+                },
+                report_name: {
+                  type: 'string',
+                  description: 'Optional custom name for the report (user-provided). If not provided, uses default format: {command}_报告_{timestamp}.md',
+                },
+              },
+              required: ['command_name', 'report_content'],
+            },
+          },
         ],
       };
     });
@@ -251,6 +345,13 @@ class ACMTSSEServer {
               args as never,
               reportFinder,
               reportLinker
+            );
+            break;
+
+          case 'upload_report':
+            result = await handleUploadReport(
+              args as never,
+              reportUploader
             );
             break;
 
@@ -319,12 +420,12 @@ class ACMTSSEServer {
    */
   async stop(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Close all MCP server connections
-      for (const [clientId, server] of this.mcpServers.entries()) {
-        logger.info(`Closing MCP server for client: ${clientId}`);
-        server.close().catch(console.error);
+      // Close all transport connections
+      for (const [sessionId, transport] of this.transports.entries()) {
+        logger.info(`Closing transport for session: ${sessionId}`);
+        transport.close().catch(console.error);
       }
-      this.mcpServers.clear();
+      this.transports.clear();
 
       // Close HTTP server
       this.httpServer.close((err) => {

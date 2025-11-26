@@ -233,6 +233,10 @@ Create `.ai-command-tool.json` in your project root or home directory:
   "search_timeout_ms": 5000,
   "enable_cache": true,
   "report_link_base_url": "https://reports.example.com/",
+  "enable_report_upload": true,
+  "report_upload_max_size_mb": 10,
+  "report_auto_versioning": true,
+  "report_file_permissions": "644",
   "log_level": "info"
 }
 ```
@@ -249,6 +253,10 @@ Create `.ai-command-tool.json` in your project root or home directory:
 | `search_timeout_ms` | number | 5000 | Search timeout in milliseconds |
 | `enable_cache` | boolean | true | Enable/disable caching |
 | `report_link_base_url` | string | "" | Base URL for report links (optional) |
+| `enable_report_upload` | boolean | true | Enable/disable report upload feature 🆕 |
+| `report_upload_max_size_mb` | number | 10 | Maximum report size in MB 🆕 |
+| `report_auto_versioning` | boolean | true | Auto-increment version on conflicts 🆕 |
+| `report_file_permissions` | string | "644" | File permissions (octal string) 🆕 |
 | `log_level` | string | "info" | Log level: debug/info/warn/error |
 
 ### Environment Variables
@@ -263,6 +271,10 @@ AICMD_REPORT_BASE_URL=https://reports.example.com/
 AICMD_MAX_RESULTS=20
 AICMD_SEARCH_TIMEOUT=5000
 AICMD_ENABLE_CACHE=true
+AICMD_ENABLE_REPORT_UPLOAD=true
+AICMD_REPORT_UPLOAD_MAX_SIZE_MB=10
+AICMD_REPORT_AUTO_VERSIONING=true
+AICMD_REPORT_FILE_PERMISSIONS=644
 AICMD_LOG_LEVEL=info
 ```
 
@@ -453,6 +465,46 @@ List all reports for a specific command.
   "total": 5
 }
 ```
+
+### 6. `upload_report` 🆕
+
+Upload a generated analysis report to the server for persistent storage. **Supports user-provided custom report names.**
+
+**Input**:
+```json
+{
+  "command_name": "analyze_zoom_speech_sdk_log",
+  "report_content": "# Analysis Report\n\n## Issues Found\n\n- Token timeout...",
+  "report_name": "Critical_Timeout_Analysis"
+}
+```
+
+**Output**:
+```json
+{
+  "success": true,
+  "report_path": "/opt/acmt/Commands-Analyze-Report/analyze_zoom_speech_sdk_log/analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251126_143022_v1.md",
+  "report_name": "analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251126_143022_v1.md",
+  "report_link": "https://server.example.com/reports/...",
+  "message": "Report uploaded successfully",
+  "version": 1
+}
+```
+
+**Features**:
+- 📝 **Custom Naming**: User can provide `report_name` (optional), or use default format: `{command}_报告_{timestamp}_v1.md`
+- 🔄 **Auto-Versioning**: Automatically increments version number on conflicts (v1 → v2 → v3)
+- 📁 **Auto-Directory Creation**: Creates command-specific report directory if first upload
+- 💾 **Atomic Writes**: Uses temp-file + rename for data integrity
+- 🔒 **Security**: Path traversal prevention, size limits, permission control
+- 🔗 **Link Generation**: Returns HTTP link if `report_link_base_url` configured
+
+**User Workflow**:
+1. AI agent generates analysis report
+2. Agent prompts user: "是否保存此报告到服务器？"
+3. User responds: "是" or provides custom name
+4. Agent calls `upload_report` with content
+5. System saves report and returns confirmation
 
 ---
 
