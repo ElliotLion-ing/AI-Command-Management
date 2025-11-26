@@ -1,0 +1,33 @@
+[Unit]
+Description=AI Commands Management Tool MCP Server
+Documentation=https://github.com/ElliotLion-ing/AI-Command-Management
+After=network.target
+
+[Service]
+Type=simple
+User=acmt
+Group=acmt
+WorkingDirectory=/opt/acmt
+Environment="NODE_ENV=production"
+Environment="PORT=5090"
+Environment="CONFIG_PATH=/opt/acmt/.ai-command-tool.json"
+ExecStart=/usr/bin/ai-commands-management-tool
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=acmt-mcp
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/acmt
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
+
