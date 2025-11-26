@@ -81,7 +81,11 @@ cat > "$INSTALL_DIR/.ai-command-tool.json" << EOF
   "search_timeout_ms": 5000,
   "enable_cache": true,
   "report_link_base_url": "https://your-domain.com/reports/",
-  "log_level": "info"
+  "log_level": "info",
+  "enable_report_upload": true,
+  "report_upload_max_size_mb": 10,
+  "report_auto_versioning": true,
+  "report_file_permissions": "644"
 }
 EOF
 
