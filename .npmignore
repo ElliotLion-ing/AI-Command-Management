@@ -19,8 +19,7 @@ vitest.config.ts
 *.spec.ts
 test-mcp.js
 test-simple.sh
-TESTING.md
-TEST-RESULTS.md
+test-local.sh
 .vscode/
 .idea/
 
