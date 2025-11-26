@@ -16,6 +16,7 @@ import { URL } from 'url';
 
 import { getConfig } from './config/index.js';
 import { logger } from './utils/logger.js';
+import { handleError } from './utils/errors.js';
 import { CommandLoader } from './commands/loader.js';
 import { ReportFinder } from './reports/finder.js';
 import { ReportLinker } from './reports/linker.js';
@@ -36,7 +37,9 @@ class ACMTSSEServer {
 
   constructor(port: number = 5090) {
     this.port = port;
-    this.httpServer = http.createServer(this.handleRequest.bind(this));
+    this.httpServer = http.createServer((req, res) => {
+      void this.handleRequest(req, res);
+    });
   }
 
   /**
@@ -208,9 +211,11 @@ class ACMTSSEServer {
     });
 
     // Register tool handlers
-    server.setRequestHandler(CallToolRequestSchema, (async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      
+
+      logger.debug('Tool call received', { toolName: name });
+
       try {
         let result;
 
@@ -250,31 +255,46 @@ class ACMTSSEServer {
             break;
 
           default:
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Unknown tool: ${name}`,
-                },
-              ],
-              isError: true,
-            };
+            throw new Error(`Unknown tool: ${name}`);
         }
 
-        return result;
-      } catch (error) {
-        logger.error('Tool execution error', error as Error);
+        // Check if result is an error
+        if ('error' in result) {
+          const mcpError = handleError(result.error as Error);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(mcpError, null, 2),
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        // Return success result
         return {
           content: [
             {
               type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        logger.error('Tool call failed', error as Error, { toolName: name });
+        const mcpError = handleError(error as Error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(mcpError, null, 2),
             },
           ],
           isError: true,
         };
       }
-    }) as any);
+    });
 
     return server;
   }
@@ -327,16 +347,18 @@ async function main(): Promise<void> {
   const server = new ACMTSSEServer(port);
 
   // Graceful shutdown
-  process.on('SIGINT', async () => {
+  process.on('SIGINT', () => {
     logger.info('Received SIGINT, shutting down...');
-    await server.stop();
-    process.exit(0);
+    void server.stop().then(() => {
+      process.exit(0);
+    });
   });
 
-  process.on('SIGTERM', async () => {
+  process.on('SIGTERM', () => {
     logger.info('Received SIGTERM, shutting down...');
-    await server.stop();
-    process.exit(0);
+    void server.stop().then(() => {
+      process.exit(0);
+    });
   });
 
   await server.start();
