@@ -14,10 +14,6 @@ tsconfig.json
 vitest.config.ts
 .gitignore
 
-# Documentation (only keep main README)
-DEPLOYMENT.md
-QUICKSTART.md
-
 # Development files
 *.test.ts
 *.spec.ts

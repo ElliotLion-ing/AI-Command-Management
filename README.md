@@ -36,18 +36,26 @@ ACMT is a Model Context Protocol (MCP) server that provides intelligent search a
 ### Install from npm
 
 ```bash
-npm install @elliotding/ai-command-tool-mcp
-```
-
-或全局安装（推荐用于 MCP 服务器）：
-
-```bash
-npm install -g @elliotding/ai-command-tool-mcp
+npm install -g @elliotding/ai-command-tool-mcp@latest
 ```
 
 ### Prerequisites
 
 - Node.js >= 18.0.0
+- npm
+
+---
+
+## 🔀 Two Running Modes
+
+ACMT supports two deployment modes:
+
+| Mode | Command | Transport | Use Case |
+|------|---------|-----------|----------|
+| **stdio** | `ai-command-tool` | Standard I/O | Local dev, SSH remote |
+| **SSE** | `ai-command-tool-server` | HTTP Server-Sent Events | Production server |
+
+**Quick Guide**: See [DUAL-MODE-GUIDE.md](DUAL-MODE-GUIDE.md) for detailed comparison.
 - Access to command and report directories on server
 
 ## 📋 Configuration
@@ -95,20 +103,66 @@ Override configuration using environment variables:
 
 ## 🔧 Usage
 
-### Configure in Cursor
+### Mode 1: stdio (Local/SSH)
 
-Add to your Cursor `mcp.json`:
+#### Configure in Cursor (Local)
 
 ```json
 {
   "mcpServers": {
-    "acmt": {
-      "url": "https://your-server.example.com/csp/acmt/sse",
+    "ai-command-tool": {
+      "command": "ai-command-tool",
+      "env": {
+        "CONFIG_PATH": "/path/to/config.json"
+      }
+    }
+  }
+}
+```
+
+#### Configure in Cursor (SSH Remote)
+
+```json
+{
+  "mcpServers": {
+    "ai-command-tool-remote": {
+      "command": "ssh",
+      "args": [
+        "user@your-server.com",
+        "CONFIG_PATH=/opt/acmt/.ai-command-tool.json",
+        "ai-command-tool"
+      ]
+    }
+  }
+}
+```
+
+### Mode 2: SSE (Production Server)
+
+#### Start Server
+
+```bash
+# Quick test
+PORT=5090 CONFIG_PATH=/opt/acmt/.ai-command-tool.json ai-command-tool-server
+
+# Production deployment
+sudo systemctl start acmt-mcp
+```
+
+#### Configure in Cursor
+
+```json
+{
+  "mcpServers": {
+    "ai-command-tool": {
+      "url": "https://your-domain.com/mcp/sse",
       "transport": "sse"
     }
   }
 }
 ```
+
+**For complete deployment guide, see [DEPLOYMENT.md](DEPLOYMENT.md)**
 
 ### Available Tools
 

@@ -2,10 +2,11 @@
   "name": "@elliotding/ai-command-tool-mcp",
   "version": "0.0.3",
   "description": "MCP server for intelligent command discovery and execution from remote repositories",
-  "main": "dist/index-sse.js",
-  "types": "dist/index-sse.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
-    "ai-commands-management-tool": "dist/index-sse.js"
+    "ai-command-tool": "dist/index.js",
+    "ai-command-tool-server": "dist/index-sse.js"
   },
   "files": [
     "dist/",
@@ -17,8 +18,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index-sse.ts --format cjs --clean --no-dts",
-    "dev": "tsup src/index-sse.ts --format cjs --watch --no-dts",
+    "build": "tsup src/index.ts src/index-sse.ts --format cjs --clean --no-dts",
+    "dev": "tsup src/index.ts src/index-sse.ts --format cjs --watch --no-dts",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",

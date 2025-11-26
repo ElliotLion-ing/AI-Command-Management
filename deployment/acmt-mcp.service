@@ -11,7 +11,7 @@ WorkingDirectory=/opt/acmt
 Environment="NODE_ENV=production"
 Environment="PORT=5090"
 Environment="CONFIG_PATH=/opt/acmt/.ai-command-tool.json"
-ExecStart=/usr/bin/ai-commands-management-tool
+ExecStart=/usr/bin/ai-command-tool
 Restart=always
 RestartSec=10
 StandardOutput=journal

@@ -41,8 +41,8 @@ sudo ./deploy-server.sh
 npm install -g @elliotding/ai-command-tool-mcp@latest
 
 # 验证安装
-which ai-commands-management-tool
-# 输出: /usr/local/bin/ai-commands-management-tool
+which ai-command-tool
+# 输出: /usr/local/bin/ai-command-tool
 ```
 
 #### 步骤 2: 创建服务用户
@@ -439,10 +439,10 @@ sudo systemctl restart acmt-mcp
 systemctl status acmt-mcp
 
 # 详细资源使用
-top -p $(pgrep -f ai-commands-management-tool)
+top -p $(pgrep -f ai-command-tool)
 
 # 或使用 htop
-htop -p $(pgrep -f ai-commands-management-tool)
+htop -p $(pgrep -f ai-command-tool)
 ```
 
 ### 日志管理

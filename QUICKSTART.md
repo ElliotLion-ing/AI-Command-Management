@@ -21,7 +21,7 @@ scp -r ./Commands/* user@server:/opt/acmt/Commands/
 scp -r ./Commands-Analyze-Report/* user@server:/opt/acmt/Commands-Analyze-Report/
 
 # 4. 启动服务（临时测试）
-PORT=5090 CONFIG_PATH=/opt/acmt/.ai-command-tool.json ai-commands-management-tool
+PORT=5090 CONFIG_PATH=/opt/acmt/.ai-command-tool.json ai-command-tool
 
 # 5. 测试
 curl http://localhost:5090/health

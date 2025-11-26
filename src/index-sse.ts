@@ -131,7 +131,7 @@ class ACMTSSEServer {
     // Create MCP server
     const server = new Server(
       {
-        name: 'ai-commands-management-tool',
+        name: 'ai-command-tool',
         version: '0.0.3',
       },
       {
