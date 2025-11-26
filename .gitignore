@@ -39,8 +39,8 @@ temp/
 .ai-command-tool.json
 
 # User data (never commit!)
-Commands/
-Commands-Analyze-Report/
+/Commands/
+/Commands-Analyze-Report/
 
 # Package manager
 package-lock.json
