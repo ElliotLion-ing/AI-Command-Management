@@ -66,6 +66,22 @@ class ACMTSSEServer {
 
     // SSE endpoint - establish SSE stream (GET)
     if (url.pathname === '/sse' && req.method === 'GET') {
+      // To solve body timeout error, add a heartbeat event to the SSE connection
+      // Create a timer to send a heartbeat event every 30 seconds
+      const heartbeat = setInterval(() => {
+        if (!res.finished) {
+          res.write(`event: heartbeat\ndata: {}\n\n`);
+        }
+      }, 30000);
+
+      // Wrap res.end to ensure the timer is cleared when the connection closes
+      const originalEnd = res.end;
+      res.end = function (...args: any[]) {
+        clearInterval(heartbeat);
+        // @ts-ignore
+        return originalEnd.apply(this, args);
+      };
+
       await this.handleSSEConnection(res);
       return;
     }
