@@ -75,11 +75,12 @@ class ACMTSSEServer {
       }, 30000);
 
       // Wrap res.end to ensure the timer is cleared when the connection closes
-      const originalEnd = res.end;
-      res.end = function (...args: any[]) {
+      const originalEnd = res.end.bind(res);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      res.end = function (this: http.ServerResponse, ...args: any[]) {
         clearInterval(heartbeat);
-        // @ts-ignore
-        return originalEnd.apply(this, args);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        return originalEnd(...args);
       };
 
       await this.handleSSEConnection(res);
