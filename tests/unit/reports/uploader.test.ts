@@ -28,7 +28,7 @@ describe('ReportUploader', () => {
   afterEach(async () => {
     // Clean up test directory with retry logic for race conditions
     try {
-      await fs.rm(testReportsDir, { recursive: true, force: true });
+    await fs.rm(testReportsDir, { recursive: true, force: true });
     } catch (error) {
       // Ignore cleanup errors (race condition in parallel tests)
       console.warn('Cleanup warning:', (error as Error).message);

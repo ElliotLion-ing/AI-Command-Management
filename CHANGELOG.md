@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Security validations (path traversal prevention, name sanitization)
   - Optional HTTP link generation for uploaded reports
   - **Note**: Now deprecated in favor of `report_feedback` for better UX
-
+  
 ### Changed
 - Updated tool count from 5 to 7 MCP tools
 - `upload_report` is now marked as legacy (use `report_feedback` instead)
