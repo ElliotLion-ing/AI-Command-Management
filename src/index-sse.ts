@@ -298,7 +298,7 @@ class ACMTSSEServer {
           },
           {
             name: 'report_feedback',
-            description: 'Collect user feedback on analysis reports and handle upload/local-save based on user decision. **IMPORTANT**: After generating an analysis report, AI MUST call this tool to ask user if they want to upload the report or save it locally only. This tool provides better user control over report management.',
+            description: '**[AUTO-TRIGGER AFTER ANALYSIS]** Handle report saving after user confirmation. **WHEN TO USE**: Automatically call this tool whenever ANY analysis command generates a report file. **WORKFLOW**: 1) Analysis tool completes and saves report → 2) AI reads the report file content → 3) AI MUST ASK user: "分析报告已生成，是否要上传到服务器保存？（输入 \'是\' 上传 / \'否\' 仅本地保存）" → 4) Wait for user response → 5) Call this tool with user_wants_upload=true/false based on user\'s answer. **CRITICAL**: This tool MUST be called after every analysis command that generates a report. DO NOT skip this step!',
             inputSchema: {
               type: 'object',
               properties: {
@@ -316,7 +316,7 @@ class ACMTSSEServer {
                 },
                 user_wants_upload: {
                   type: 'boolean',
-                  description: 'User decision: true = upload to server, false = save locally only. AI should ask user for confirmation before setting this value.',
+                  description: 'User\'s decision after being asked. true = user confirmed upload to server, false = user wants local save only. **CRITICAL**: AI MUST ask user first and get explicit confirmation before setting this value. Do NOT assume or decide for the user!',
                 },
               },
               required: ['command_name', 'report_content', 'user_wants_upload'],

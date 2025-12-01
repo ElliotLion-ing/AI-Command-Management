@@ -113,6 +113,7 @@ export interface GetCommandOutput {
     last_modified: string;
     description: string;
   };
+  next_steps?: string; // Hint for AI about what to do after executing this command
 }
 
 /**

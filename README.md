@@ -514,14 +514,25 @@ Collect user feedback on analysis reports and handle upload/local-save based on 
 - 📁 **Smart Organization**: Local reports in `local-reports/`, uploaded reports in server directory
 - 🔒 **Security**: All validation and security features from upload_report
 
-**User Workflow**:
-1. AI agent generates analysis report
-2. AI prompts user: "分析报告已生成。是否上传到服务器存储？(是/否)"
-3. User responds:
-   - "是" or "上传" → `user_wants_upload: true` (upload to server)
-   - "否" or "本地保存" → `user_wants_upload: false` (save locally only)
-4. Agent calls `report_feedback` with user's choice
-5. System handles accordingly and returns confirmation
+**Correct Workflow** (⚠️ **CRITICAL - Must Follow**):
+1. **AI generates report**: Complete the analysis
+2. **AI asks user**: Display report summary and ask: "分析报告已生成。是否上传到服务器存储？(输入'是'上传 / '否'仅本地保存)"
+3. **Wait for user response**: DO NOT proceed until user responds
+4. **User responds**:
+   - "是" or "上传" → User wants upload
+   - "否" or "本地" → User wants local save only
+5. **AI calls tool** with user's choice:
+   - If user said "是": `user_wants_upload: true`
+   - If user said "否": `user_wants_upload: false`
+6. **System executes** and returns confirmation
+7. **AI confirms to user**: Show where the report was saved
+
+⚠️ **DO NOT**:
+- ❌ Call this tool before asking the user
+- ❌ Decide `user_wants_upload` value without user confirmation
+- ❌ Assume user's intent
+
+📚 **See detailed workflow**: [docs/CORRECT_WORKFLOW.md](./docs/CORRECT_WORKFLOW.md)
 
 ### 7. `upload_report` (Legacy)
 

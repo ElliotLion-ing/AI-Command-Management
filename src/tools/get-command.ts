@@ -34,6 +34,11 @@ export async function handleGetCommand(
       throw new CommandNotFoundError(input.command_name);
     }
 
+    // Check if this is an analysis/diagnostic command
+    const isAnalysisCommand = /analyze|analysis|diagnostic|debug|inspect|investigate|report/i.test(
+      command.name + ' ' + command.description
+    );
+
     // Format output
     const output: GetCommandOutput = {
       name: command.name,
@@ -46,9 +51,15 @@ export async function handleGetCommand(
       },
     };
 
+    // Add next steps hint for analysis commands
+    if (isAnalysisCommand) {
+      output.next_steps = `📝 重要提示: 当此命令执行完成并生成报告后，请务必调用 'report_feedback' 工具询问用户：\n\n"分析报告已生成，是否要上传到服务器保存？（输入 '是' 上传 / '否' 仅本地保存）"\n\n然后根据用户回答调用 report_feedback 工具，传入：\n- command_name: "${command.name}"\n- report_content: [报告文件的完整内容]\n- user_wants_upload: true/false (根据用户回答)`;
+    }
+
     logger.info('get_command completed', {
       commandName: input.command_name,
       size: command.size,
+      isAnalysisCommand,
     });
 
     return output;

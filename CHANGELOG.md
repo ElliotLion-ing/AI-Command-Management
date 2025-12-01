@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Improved `report_feedback` tool description** to emphasize user interaction workflow
+  - Tool description now clearly states AI must ASK user first
+  - Added step-by-step workflow in tool description
+  - Enhanced parameter descriptions with critical warnings
+  - Created comprehensive workflow documentation (CORRECT_WORKFLOW.md)
+  - Updated README with detailed "Correct Workflow" section
+
 ### Added
 - **NEW MCP Tool: `report_feedback`** 🎉✨ (Recommended)
   - Collect user feedback before uploading reports
