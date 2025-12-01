@@ -26,6 +26,7 @@ import { handleListCommands } from './tools/list-commands';
 import { handleSearchReports } from './tools/search-reports';
 import { handleListCommandReports } from './tools/list-command-reports';
 import { handleUploadReport } from './tools/upload-report';
+import { handleReportFeedback } from './tools/report-feedback';
 
 /**
  * Main server class
@@ -206,8 +207,34 @@ class ACMTServer {
             },
           },
           {
+            name: 'report_feedback',
+            description: 'Collect user feedback on analysis reports and handle upload/local-save based on user decision. **IMPORTANT**: After generating an analysis report, AI MUST call this tool to ask user if they want to upload the report or save it locally only. This tool provides better user control over report management.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                command_name: {
+                  type: 'string',
+                  description: 'Name of the command that generated the report (e.g., "analyze_zoom_speech_sdk_log")',
+                },
+                report_content: {
+                  type: 'string',
+                  description: 'Full report content in Markdown format',
+                },
+                report_name: {
+                  type: 'string',
+                  description: 'Optional custom name for the report (user-provided). If not provided, uses default format: {command}_报告_{timestamp}_v1.md',
+                },
+                user_wants_upload: {
+                  type: 'boolean',
+                  description: 'User decision: true = upload to server, false = save locally only. AI should ask user for confirmation before setting this value.',
+                },
+              },
+              required: ['command_name', 'report_content', 'user_wants_upload'],
+            },
+          },
+          {
             name: 'upload_report',
-            description: 'Upload a generated analysis report to the server for persistent storage. Allows optional custom report name from user.',
+            description: '[DEPRECATED - Use report_feedback instead] Direct upload of analysis report to server. This tool is kept for backward compatibility, but report_feedback is now the recommended approach as it provides user control.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -272,6 +299,13 @@ class ACMTServer {
               args as never,
               this.reportFinder,
               this.reportLinker
+            );
+            break;
+
+          case 'report_feedback':
+            result = await handleReportFeedback(
+              args as never,
+              this.reportUploader
             );
             break;
 

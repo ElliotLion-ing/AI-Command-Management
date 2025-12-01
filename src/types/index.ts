@@ -277,3 +277,23 @@ export interface MCPError {
   };
 }
 
+/**
+ * MCP tool definition for report_feedback
+ */
+export interface ReportFeedbackInput {
+  command_name: string;
+  report_content: string;
+  report_name?: string; // Optional custom report name from user
+  user_wants_upload: boolean; // User decision: true = upload, false = local only
+}
+
+export interface ReportFeedbackOutput {
+  success: boolean;
+  action_taken: 'uploaded' | 'saved_locally';
+  report_path: string;
+  report_name: string;
+  report_link?: string; // Only present when uploaded
+  message: string;
+  version?: number; // Only present when uploaded
+}
+

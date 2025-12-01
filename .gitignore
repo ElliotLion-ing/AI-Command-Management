@@ -41,6 +41,7 @@ temp/
 # User data (never commit!)
 /Commands/
 /Commands-Analyze-Report/
+/local-reports/
 
 # Package manager
 package-lock.json
