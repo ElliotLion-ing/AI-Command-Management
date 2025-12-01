@@ -41,7 +41,7 @@ export class ReportUploader {
       const fileName = this.generateFileName(input.command_name, input.report_name);
 
       // 4. Resolve version conflicts
-      const finalPath = await this.resolveVersionConflict(reportDir, fileName);
+      const { finalPath, hadConflict, version } = await this.resolveVersionConflict(reportDir, fileName);
 
       // 5. Write file atomically
       await this.writeFileAtomic(finalPath, input.report_content);
@@ -49,15 +49,21 @@ export class ReportUploader {
       // 6. Set permissions
       await this.setFilePermissions(finalPath);
 
-      // 7. Generate result
-      const version = this.extractVersion(path.basename(finalPath));
+      // 7. Generate result with conflict notification
       const link = this.generateLink(finalPath);
+      
+      // Build message based on whether there was a conflict
+      let message = 'Report uploaded successfully';
+      if (hadConflict) {
+        message = `Report uploaded successfully (auto-versioned to v${version} to avoid name conflict)`;
+      }
 
       logger.info('Report uploaded successfully', {
         command: input.command_name,
         path: finalPath,
         size: input.report_content.length,
         version,
+        hadConflict,
       });
 
       return {
@@ -65,7 +71,7 @@ export class ReportUploader {
         report_path: finalPath,
         report_name: path.basename(finalPath),
         report_link: link,
-        message: 'Report uploaded successfully',
+        message,
         version,
       };
     } catch (error) {
@@ -200,13 +206,18 @@ export class ReportUploader {
 
   /**
    * Resolve version conflicts
+   * Returns both the final path and whether a conflict was detected
    */
   private async resolveVersionConflict(
     directory: string,
     fileName: string
-  ): Promise<string> {
+  ): Promise<{ finalPath: string; hadConflict: boolean; version: number }> {
     if (!this.config.autoVersioning) {
-      return path.join(directory, fileName);
+      return {
+        finalPath: path.join(directory, fileName),
+        hadConflict: false,
+        version: 1,
+      };
     }
 
     let version = 1;
@@ -227,14 +238,15 @@ export class ReportUploader {
       }
     }
 
-    if (version > 1) {
+    const hadConflict = version > 1;
+    if (hadConflict) {
       logger.info('Version conflict resolved', {
         original_file: fileName,
         final_version: version,
       });
     }
 
-    return finalPath;
+    return { finalPath, hadConflict, version };
   }
 
   /**
@@ -280,17 +292,6 @@ export class ReportUploader {
         error: (error as Error).message,
       });
     }
-  }
-
-  /**
-   * Extract version number from filename
-   */
-  private extractVersion(fileName: string): number {
-    const match = fileName.match(/_v(\d+)\.md$/);
-    if (match && match[1]) {
-      return parseInt(match[1], 10);
-    }
-    return 1;
   }
 
   /**

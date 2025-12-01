@@ -466,7 +466,66 @@ List all reports for a specific command.
 }
 ```
 
-### 6. `upload_report` 🆕
+### 6. `report_feedback` 🆕 (Recommended)
+
+Collect user feedback on analysis reports and handle upload/local-save based on user decision.
+
+**Important**: This is now the **recommended** approach for report management as it provides better user control. After generating an analysis report, AI should call this tool to ask the user if they want to upload the report to the server or save it locally only.
+
+**Input**:
+```json
+{
+  "command_name": "analyze_zoom_speech_sdk_log",
+  "report_content": "# Analysis Report\n\n## Issues Found\n\n- Token timeout...",
+  "report_name": "Critical_Timeout_Analysis",
+  "user_wants_upload": true
+}
+```
+
+**Output (Uploaded)**:
+```json
+{
+  "success": true,
+  "action_taken": "uploaded",
+  "report_path": "/opt/acmt/Commands-Analyze-Report/analyze_zoom_speech_sdk_log/analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251201_143022_v1.md",
+  "report_name": "analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251201_143022_v1.md",
+  "report_link": "https://server.example.com/reports/...",
+  "message": "Report uploaded to server successfully",
+  "version": 1
+}
+```
+
+**Output (Local Only)**:
+```json
+{
+  "success": true,
+  "action_taken": "saved_locally",
+  "report_path": "/path/to/workspace/local-reports/analyze_zoom_speech_sdk_log/analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251201_143022_local.md",
+  "report_name": "analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251201_143022_local.md",
+  "message": "Report saved locally (not uploaded to server)"
+}
+```
+
+**Features**:
+- ✅ **User Control**: Ask user before uploading
+- 📝 **Custom Naming**: Optional custom report name from user
+- 💾 **Dual Mode**: Upload to server OR save locally only
+- 🔄 **Auto-Versioning**: Increments version on upload conflicts
+- 📁 **Smart Organization**: Local reports in `local-reports/`, uploaded reports in server directory
+- 🔒 **Security**: All validation and security features from upload_report
+
+**User Workflow**:
+1. AI agent generates analysis report
+2. AI prompts user: "分析报告已生成。是否上传到服务器存储？(是/否)"
+3. User responds:
+   - "是" or "上传" → `user_wants_upload: true` (upload to server)
+   - "否" or "本地保存" → `user_wants_upload: false` (save locally only)
+4. Agent calls `report_feedback` with user's choice
+5. System handles accordingly and returns confirmation
+
+### 7. `upload_report` (Legacy)
+
+**Note**: This tool is kept for backward compatibility. **Please use `report_feedback` instead** for better user experience.
 
 Upload a generated analysis report to the server for persistent storage. **Supports user-provided custom report names.**
 

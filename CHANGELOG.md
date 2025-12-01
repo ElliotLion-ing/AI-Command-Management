@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **NEW MCP Tool: `report_feedback`** 🎉✨ (Recommended)
+  - Collect user feedback before uploading reports
+  - Dual-mode operation: upload to server OR save locally only
+  - User control over report storage location
+  - Ask user confirmation before uploading
+  - Local-only mode saves reports to `local-reports/` directory
+  - All validation and security features from `upload_report`
+  - Better user experience with explicit consent workflow
+  
 - **NEW MCP Tool: `upload_report`** 🎉
   - Upload AI-generated analysis reports to server for persistent storage
   - Support for user-provided custom report names
@@ -18,19 +27,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable file permissions (default 644)
   - Security validations (path traversal prevention, name sanitization)
   - Optional HTTP link generation for uploaded reports
-  
+  - **Note**: Now deprecated in favor of `report_feedback` for better UX
+
 ### Changed
-- Updated tool count from 5 to 6 MCP tools
+- Updated tool count from 5 to 7 MCP tools
+- `upload_report` is now marked as legacy (use `report_feedback` instead)
 - Enhanced configuration schema with upload-related options:
   - `enable_report_upload` (default: true)
   - `report_upload_max_size_mb` (default: 10)
   - `report_auto_versioning` (default: true)
   - `report_file_permissions` (default: "644")
 - **Report directory naming**: Report folders now use the command name directly (e.g., `analyze_zoom_speech_sdk_log/`) instead of adding `-reports` suffix (e.g., `analyze_zoom_speech_sdk_log-reports/`)
+- Added `local-reports/` directory to `.gitignore` for local-only reports
 
 ### Documentation
-- Added comprehensive `upload_report` tool documentation to README
-- Added user workflow examples for report upload
+- Added comprehensive `report_feedback` tool documentation to README (recommended approach)
+- Updated `upload_report` documentation with deprecation notice
+- Added user workflow examples for report feedback and upload
 - Updated configuration examples with new upload options
 
 ## [0.0.1] - 2025-11-25
