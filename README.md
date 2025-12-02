@@ -5,6 +5,8 @@
 [![npm version](https://img.shields.io/npm/v/@elliotding/ai-command-tool-mcp.svg)](https://www.npmjs.com/package/@elliotding/ai-command-tool-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+[English](README.md) | [中文](README_CN.md)
+
 ACMT is a Model Context Protocol (MCP) server that provides intelligent search and management of command definitions. It supports both **stdio** (local/SSH) and **SSE** (remote HTTP) transport modes, enabling users to discover and execute commands without copying them to their local workspace.
 
 ---
