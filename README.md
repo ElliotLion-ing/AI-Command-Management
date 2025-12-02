@@ -30,26 +30,31 @@ ACMT is a Model Context Protocol (MCP) server that provides intelligent search a
 
 - **🔀 Dual Transport Modes**
   - **stdio**: Standard I/O for local development and SSH remote access
-  - **SSE**: Server-Sent Events for production HTTP/HTTPS deployment
+  - **SSE**: Server-Sent Events with heartbeat mechanism for stable long-running connections 🆕
   
 - **🔍 Three-Tier Intelligent Search**
   - Tier 1: Keyword matching against filenames
-  - Tier 2: Semantic search of command content
+  - Tier 2: Semantic search of command content with frontmatter support 🆕
   - Tier 3: Discovery through historical analysis reports
   
-- **📁 Remote Command Management**
+- **📁 Smart Command Management**
   - Commands stored on remote server
+  - Dependency filtering - hide helper commands, show only primary commands 🆕
+  - Frontmatter metadata support for command organization 🆕
   - No local file clutter
   - Centralized version control
 
-- **📊 Report Discovery**
+- **📊 Report Discovery & Management**
   - Search across historical analysis reports
   - Command-specific report filtering
+  - User-controlled report upload (ask before uploading) 🆕
   - Automatic date extraction and sorting
+  - Auto-versioning on conflicts 🆕
 
 - **⚡ High Performance**
   - Intelligent caching system (configurable TTL)
   - Search optimization with timeout control
+  - SSE connection stability with heartbeat mechanism 🆕
   - Configurable limits and thresholds
 
 - **🔒 Security**
@@ -57,6 +62,7 @@ ACMT is a Model Context Protocol (MCP) server that provides intelligent search a
   - Directory traversal prevention
   - Input validation on all queries
   - SystemD service isolation (production mode)
+  - Report size limits and permission control 🆕
 
 ---
 
@@ -188,6 +194,7 @@ ACMT supports two transport modes. Choose based on your needs:
 - ✅ Multi-user support
 - ✅ No SSH needed
 - ✅ Easy monitoring
+- ✅ Stable connections with heartbeat mechanism 🆕
 
 **Cons**:
 - ❌ Requires port configuration
@@ -337,6 +344,71 @@ MCP Response:
   ]
 }
 ```
+
+---
+
+## 📚 Command Organization
+
+### Dependency Command Filtering 🆕
+
+ACMT supports organizing complex command structures by marking helper commands as dependencies. This keeps your command listings clean and focused on primary commands while maintaining full functionality.
+
+#### How It Works
+
+1. **Mark Dependencies**: Add frontmatter to helper command markdown files:
+
+```markdown
+---
+is_dependency: true
+---
+
+# Log Type Identification Rules
+
+This helper command provides log type identification logic...
+```
+
+2. **Automatic Filtering**: Dependency commands are:
+   - ✅ Hidden from `list_commands` results
+   - ✅ Excluded from `search_commands` results
+   - ✅ Still accessible via direct `get_command` calls
+   - ✅ Fully functional when referenced by primary commands
+
+#### Example Use Case
+
+**Primary Command**: `proxy-slow-meeting-analysis-command.md`
+```markdown
+# Proxy Slow Meeting Analysis
+
+This command analyzes proxy logs for meeting join issues.
+
+## Dependencies
+- [Log Type Identification](./log-type-identification.md)
+- [Proxy Thread Identification](./proxy-thread-identification.md)
+- [Meeting Join Process](./meeting-join-proxy-process.md)
+
+## Usage
+...
+```
+
+**Helper Commands** (marked as dependencies):
+- `log-type-identification.md` - Helper logic for log type detection
+- `proxy-thread-identification.md` - Thread identification patterns
+- `meeting-join-proxy-process.md` - Meeting join flow reference
+
+**Result**: Users only see `proxy-slow-meeting-analysis-command` in listings, but it can still reference and use all helper commands internally.
+
+#### Migration Guide
+
+To organize existing commands:
+
+1. Identify helper/dependency commands
+2. Add frontmatter to each dependency file:
+```markdown
+---
+is_dependency: true
+---
+```
+3. No code changes needed - filtering is automatic!
 
 ---
 
@@ -780,26 +852,48 @@ npm run lint
 AI-Command-Management/
 ├── src/
 │   ├── index.ts              # stdio mode entry point
-│   ├── index-sse.ts          # SSE mode entry point
+│   ├── index-sse.ts          # SSE mode entry point (with heartbeat) 🆕
 │   ├── config/               # Configuration management
-│   ├── commands/             # Command loading and parsing
-│   ├── reports/              # Report finding and linking
+│   ├── commands/
+│   │   ├── loader.ts         # Command loading with frontmatter parsing 🆕
+│   │   └── parser.ts         # Markdown parsing
+│   ├── reports/
+│   │   ├── finder.ts         # Report discovery
+│   │   ├── linker.ts         # Report URL generation
+│   │   └── uploader.ts       # Report upload with versioning 🆕
 │   ├── search/               # Three-tier search engine
+│   │   ├── engine.ts         # Main search logic
+│   │   └── indexer.ts        # Content indexing
 │   ├── tools/                # MCP tool handlers
-│   ├── utils/                # Utilities (logger, errors, etc.)
+│   │   ├── search-commands.ts
+│   │   ├── get-command.ts
+│   │   ├── list-commands.ts
+│   │   ├── search-reports.ts
+│   │   ├── list-command-reports.ts
+│   │   ├── report-feedback.ts  # User-controlled report upload 🆕
+│   │   └── upload-report.ts    # Legacy upload (kept for compatibility)
+│   ├── utils/                # Utilities (logger, errors, cache, etc.)
 │   └── types/                # TypeScript type definitions
 ├── tests/
 │   ├── unit/                 # Unit tests
+│   │   ├── basic.test.ts
+│   │   ├── commands/
+│   │   ├── reports/
+│   │   └── tools/
 │   ├── integration/          # Integration tests
 │   └── fixtures/             # Test data
+├── Commands/                 # Command definitions (markdown)
+│   ├── *.md                  # Primary commands
+│   └── *.md (is_dependency: true)  # Dependency commands (hidden) 🆕
 ├── deployment/
 │   ├── acmt-mcp.service      # SystemD service config
 │   ├── deploy-server.sh      # Deployment script
-│   └── nginx-acmt.conf       # Nginx config
+│   └── nginx-acmt.conf       # Nginx config with SSE optimization 🆕
 ├── dist/                     # Build output
 │   ├── index.js              # stdio mode build
 │   └── index-sse.js          # SSE mode build
-└── test-local.sh             # Local testing script
+├── test-local.sh             # Local testing script
+└── publish.sh                # NPM publishing script
 ```
 
 ### Adding New Features
@@ -1009,9 +1103,51 @@ Built with:
 - [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/sdk) - MCP Protocol
 - [fuse.js](https://fusejs.io/) - Fuzzy search
 - [marked](https://marked.js.org/) - Markdown parsing
+- [gray-matter](https://github.com/jonschlinkert/gray-matter) - Frontmatter parsing 🆕
 - [TypeScript](https://www.typescriptlang.org/) - Type safety
 
 ---
 
-**Version**: 0.0.3  
-**Last Updated**: 2025-11-26
+**Version**: 0.2.0  
+**Last Updated**: 2025-12-02
+
+---
+
+## 🆕 What's New in v0.2.0
+
+### Dependency Command Filtering
+Commands can now be marked as dependencies using frontmatter metadata. Dependency commands are automatically hidden from search and list results, reducing clutter and showing only the primary commands users need.
+
+**Example**:
+```markdown
+---
+is_dependency: true
+---
+
+# Helper Command Content
+This command is used as a dependency by other commands...
+```
+
+**Benefits**:
+- ✅ Cleaner command listings
+- ✅ Better organization of complex command structures
+- ✅ Users see only what they need to use directly
+- ✅ Dependencies are still accessible when needed by primary commands
+
+### SSE Connection Stability
+The SSE server now implements a heartbeat mechanism that sends periodic keep-alive events every 30 seconds. This prevents proxy timeouts and connection drops during idle periods.
+
+**Technical Details**:
+- Heartbeat interval: 30 seconds
+- Automatic cleanup on connection close
+- Compatible with Nginx proxy configurations
+- Improved long-running session stability
+
+### Enhanced Frontmatter Support
+Commands now support YAML frontmatter for metadata storage, enabling:
+- Command categorization
+- Dependency marking
+- Custom metadata fields
+- Better organization and filtering
+
+**Powered by**: [gray-matter](https://github.com/jonschlinkert/gray-matter)
