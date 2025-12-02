@@ -6,6 +6,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { marked } from 'marked';
+import matter from 'gray-matter';
 import { Command, CommandMetadata, FileSystemError } from '../types';
 import { Cache, createCache } from '../cache';
 import { validateCommandName, sanitizePath } from '../utils/validators';
@@ -50,6 +51,18 @@ export class CommandLoader {
 
       for (const file of mdFiles) {
         try {
+          // Check if file is a dependency
+          const filePath = path.join(this.commandsDir, file);
+          const isDependency = await this.isDependencyFile(filePath);
+          
+          logger.debug(`Checking file: ${file}, isDependency: ${isDependency}`);
+          
+          // Skip dependency files
+          if (isDependency) {
+            logger.info(`Skipping dependency file: ${file}`);
+            continue;
+          }
+
           const metadata = await this.getMetadata(file.replace('.md', ''));
           commands.push(metadata);
         } catch (error) {
@@ -228,6 +241,37 @@ export class CommandLoader {
       return text.substring(0, 197) + '...';
     }
     return text || 'No description available';
+  }
+
+  /**
+   * Check if a file is marked as a dependency in frontmatter
+   */
+  private async isDependencyFile(filePath: string): Promise<boolean> {
+    try {
+      // Read enough bytes to get complete frontmatter (typically under 500 bytes)
+      const handle = await fs.open(filePath, 'r');
+      const buffer = Buffer.alloc(500);
+      const { bytesRead } = await handle.read(buffer, 0, 500, 0);
+      await handle.close();
+
+      const content = buffer.toString('utf-8', 0, bytesRead);
+
+      // Quick check: if file doesn't start with '---', it has no frontmatter
+      if (!content.trim().startsWith('---')) {
+        return false;
+      }
+
+      // Parse frontmatter using gray-matter
+      const parsed = matter(content);
+
+      // Check if is_dependency is true
+      return parsed.data.is_dependency === true;
+    } catch (error) {
+      logger.warn(`Failed to check dependency status for ${filePath}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false; // If we can't parse, assume it's not a dependency
+    }
   }
 
   /**
