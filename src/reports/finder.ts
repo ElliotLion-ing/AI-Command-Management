@@ -20,10 +20,14 @@ export class ReportFinder {
 
   /**
    * Search reports globally or within a specific command
+   * When query is '*' or empty string, returns all reports
    */
   async search(query: string, commandFilter?: string): Promise<ReportMatch[]> {
     const lowerQuery = query.toLowerCase();
     const matches: ReportMatch[] = [];
+    
+    // Check if we should match all reports (wildcard or empty query)
+    const matchAll = query === '*' || query.trim() === '';
 
     try {
       // Determine search scope
@@ -53,11 +57,11 @@ export class ReportFinder {
               const content = await fs.readFile(filePath, 'utf-8');
               const stats = await fs.stat(filePath);
 
-              // Check if query matches content
+              // Check if query matches content (or match all if wildcard/empty)
               const lowerContent = content.toLowerCase();
-              if (lowerContent.includes(lowerQuery)) {
-                const matchCount = this.countMatches(lowerContent, lowerQuery);
-                const excerpt = this.extractExcerpt(content, query, 100);
+              if (matchAll || lowerContent.includes(lowerQuery)) {
+                const matchCount = matchAll ? 0 : this.countMatches(lowerContent, lowerQuery);
+                const excerpt = matchAll ? this.extractFirstLines(content, 200) : this.extractExcerpt(content, query, 100);
                 const commandName = this.extractCommandName(dir);
                 const date = this.extractDate(file);
 
@@ -299,6 +303,28 @@ export class ReportFinder {
     }
 
     return excerpt.trim();
+  }
+
+  /**
+   * Extract first N characters from content (for wildcard/empty query)
+   */
+  private extractFirstLines(content: string, maxChars: number): string {
+    if (content.length <= maxChars) {
+      return content.trim();
+    }
+    
+    let excerpt = content.substring(0, maxChars);
+    
+    // Try to break at a natural point (newline or space)
+    const lastNewline = excerpt.lastIndexOf('\n');
+    const lastSpace = excerpt.lastIndexOf(' ');
+    const breakPoint = Math.max(lastNewline, lastSpace);
+    
+    if (breakPoint > maxChars * 0.6) {
+      excerpt = excerpt.substring(0, breakPoint);
+    }
+    
+    return excerpt.trim() + '...';
   }
 
   /**
