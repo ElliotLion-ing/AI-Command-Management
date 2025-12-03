@@ -30,21 +30,15 @@ export class ReportFinder {
       let searchDirs: string[];
 
       if (commandFilter) {
-        // Search only in specific command's reports
-        const commandReportDir = path.join(this.reportsDir, `${commandFilter}-reports`);
-        try {
-          await fs.access(commandReportDir);
-          searchDirs = [commandReportDir];
-        } catch {
+        // Search only in specific command's reports directory
+        searchDirs = await this.getCommandReportDirs(commandFilter);
+        if (searchDirs.length === 0) {
           logger.warn(`Report directory not found for command: ${commandFilter}`);
           return [];
         }
       } else {
-        // Search all report directories
-        const dirs = await fs.readdir(this.reportsDir, { withFileTypes: true });
-        searchDirs = dirs
-          .filter(dirent => dirent.isDirectory() && dirent.name.endsWith('-reports'))
-          .map(dirent => path.join(this.reportsDir, dirent.name));
+        // Search all report directories (named by command name directly)
+        searchDirs = await this.getAllReportDirs();
       }
 
       // Search each directory
@@ -119,39 +113,46 @@ export class ReportFinder {
 
   /**
    * List reports for a specific command
+   * Directory naming convention: {command}/ (command name directly, no suffix)
    */
   async listForCommand(commandName: string): Promise<ReportMetadata[]> {
-    const reportDir = path.join(this.reportsDir, `${commandName}-reports`);
+    // Get all directories that could contain reports for this command
+    const reportDirs = await this.getCommandReportDirs(commandName);
 
-    try {
-      await fs.access(reportDir);
-    } catch {
-      // Directory doesn't exist, return empty array
+    if (reportDirs.length === 0) {
       logger.debug(`No reports directory for command: ${commandName}`);
       return [];
     }
 
+    const reports: ReportMetadata[] = [];
+
     try {
-      const files = await fs.readdir(reportDir);
-      const mdFiles = files.filter(f => f.endsWith('.md'));
-
-      const reports: ReportMetadata[] = [];
-
-      for (const file of mdFiles) {
+      for (const reportDir of reportDirs) {
         try {
-          const filePath = path.join(reportDir, file);
-          const stats = await fs.stat(filePath);
-          const date = this.extractDate(file);
+          const files = await fs.readdir(reportDir);
+          const mdFiles = files.filter(f => f.endsWith('.md'));
 
-          reports.push({
-            name: file,
-            command_name: commandName,
-            path: filePath,
-            date,
-            size: stats.size,
-          });
+          for (const file of mdFiles) {
+            try {
+              const filePath = path.join(reportDir, file);
+              const stats = await fs.stat(filePath);
+              const date = this.extractDate(file);
+
+              reports.push({
+                name: file,
+                command_name: commandName,
+                path: filePath,
+                date,
+                size: stats.size,
+              });
+            } catch (error) {
+              logger.warn(`Failed to load report metadata: ${file}`, {
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
         } catch (error) {
-          logger.warn(`Failed to load report metadata: ${file}`, {
+          logger.warn(`Failed to read report directory: ${reportDir}`, {
             error: error instanceof Error ? error.message : String(error),
           });
         }
@@ -172,8 +173,59 @@ export class ReportFinder {
     } catch (error) {
       throw new FileSystemError(
         `Failed to list reports for command: ${error instanceof Error ? error.message : String(error)}`,
-        reportDir
+        this.reportsDir
       );
+    }
+  }
+
+  /**
+   * Get report directory for a specific command
+   * Directory naming convention: {command}/ (command name directly, no suffix)
+   */
+  private async getCommandReportDirs(commandName: string): Promise<string[]> {
+    const dirs: string[] = [];
+
+    // Check {command}/ directory (command name directly, no -reports suffix)
+    const commandDir = path.join(this.reportsDir, commandName);
+    try {
+      await fs.access(commandDir);
+      const stat = await fs.stat(commandDir);
+      if (stat.isDirectory()) {
+        dirs.push(commandDir);
+      }
+    } catch {
+      // Directory doesn't exist, skip
+    }
+
+    return dirs;
+  }
+
+  /**
+   * Get all report directories in the reports folder
+   * Directory naming convention: {command}/ (command name directly, no suffix)
+   * Note: Directories ending with '-reports' are excluded (legacy naming)
+   */
+  private async getAllReportDirs(): Promise<string[]> {
+    try {
+      const entries = await fs.readdir(this.reportsDir, { withFileTypes: true });
+      const dirs: string[] = [];
+
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          // Exclude directories with -reports suffix (legacy naming convention)
+          // Only include directories named directly after command names
+          if (!entry.name.endsWith('-reports')) {
+            dirs.push(path.join(this.reportsDir, entry.name));
+          }
+        }
+      }
+
+      return dirs;
+    } catch (error) {
+      logger.warn(`Failed to list report directories`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
     }
   }
 
@@ -214,14 +266,11 @@ export class ReportFinder {
 
   /**
    * Extract command name from report directory path
+   * Directory naming convention: {command}/ (command name directly, no suffix)
    */
   private extractCommandName(dirPath: string): string {
-    const dirName = path.basename(dirPath);
-    // Remove -reports suffix
-    if (dirName.endsWith('-reports')) {
-      return dirName.substring(0, dirName.length - 8);
-    }
-    return dirName;
+    // Directory name is the command name itself (no suffix to remove)
+    return path.basename(dirPath);
   }
 
   /**
