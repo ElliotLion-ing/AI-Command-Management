@@ -540,7 +540,40 @@ List all reports for a specific command.
 }
 ```
 
-### 6. `report_feedback` 🆕 (Recommended)
+### 6. `get_report` 🆕
+
+Get full content of a specific report by command name and report name.
+
+**Input**:
+```json
+{
+  "command_name": "analyze_zoom_speech_sdk_log",
+  "report_name": "Zoom_Speech_SDK_日志分析报告_20251120_decode_response_v6.md"
+}
+```
+
+**Output**:
+```json
+{
+  "name": "Zoom_Speech_SDK_日志分析报告_20251120_decode_response_v6.md",
+  "command_name": "analyze_zoom_speech_sdk_log",
+  "content": "# Full report content in markdown...",
+  "metadata": {
+    "path": "/opt/acmt/Commands-Analyze-Report/analyze_zoom_speech_sdk_log/Zoom_Speech_SDK_日志分析报告_20251120_decode_response_v6.md",
+    "size": 11179,
+    "date": "2025-11-20T00:00:00.000Z",
+    "link": "https://..."
+  }
+}
+```
+
+**Features**:
+- 📄 **Full Content**: Returns complete report content (not just excerpt)
+- 🔒 **Security**: Path traversal prevention
+- 📊 **Metadata**: Includes file size, date, and optional HTTP link
+- 🔍 **Companion Tool**: Use with `list_command_reports` or `search_reports` to find report names first
+
+### 7. `report_feedback` (Recommended)
 
 Collect user feedback on analysis reports and handle upload/local-save based on user decision.
 
@@ -607,48 +640,6 @@ Collect user feedback on analysis reports and handle upload/local-save based on 
 - ❌ Assume user's intent
 
 📚 **See detailed workflow**: [docs/CORRECT_WORKFLOW.md](./docs/CORRECT_WORKFLOW.md)
-
-### 7. `upload_report` (Legacy)
-
-**Note**: This tool is kept for backward compatibility. **Please use `report_feedback` instead** for better user experience.
-
-Upload a generated analysis report to the server for persistent storage. **Supports user-provided custom report names.**
-
-**Input**:
-```json
-{
-  "command_name": "analyze_zoom_speech_sdk_log",
-  "report_content": "# Analysis Report\n\n## Issues Found\n\n- Token timeout...",
-  "report_name": "Critical_Timeout_Analysis"
-}
-```
-
-**Output**:
-```json
-{
-  "success": true,
-  "report_path": "/opt/acmt/Commands-Analyze-Report/analyze_zoom_speech_sdk_log/analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251126_143022_v1.md",
-  "report_name": "analyze_zoom_speech_sdk_log_Critical_Timeout_Analysis_20251126_143022_v1.md",
-  "report_link": "https://server.example.com/reports/...",
-  "message": "Report uploaded successfully",
-  "version": 1
-}
-```
-
-**Features**:
-- 📝 **Custom Naming**: User can provide `report_name` (optional), or use default format: `{command}_报告_{timestamp}_v1.md`
-- 🔄 **Auto-Versioning**: Automatically increments version number on conflicts (v1 → v2 → v3)
-- 📁 **Auto-Directory Creation**: Creates command-specific report directory if first upload
-- 💾 **Atomic Writes**: Uses temp-file + rename for data integrity
-- 🔒 **Security**: Path traversal prevention, size limits, permission control
-- 🔗 **Link Generation**: Returns HTTP link if `report_link_base_url` configured
-
-**User Workflow**:
-1. AI agent generates analysis report
-2. Agent prompts user: "是否保存此报告到服务器？"
-3. User responds: "是" or provides custom name
-4. Agent calls `upload_report` with content
-5. System saves report and returns confirmation
 
 ---
 
@@ -872,8 +863,8 @@ AI-Command-Management/
 │   │   ├── list-commands.ts
 │   │   ├── search-reports.ts
 │   │   ├── list-command-reports.ts
-│   │   ├── report-feedback.ts  # User-controlled report upload 🆕
-│   │   └── upload-report.ts    # Legacy upload (kept for compatibility)
+│   │   ├── get-report.ts       # Get full report content 🆕
+│   │   └── report-feedback.ts  # User-controlled report upload
 │   ├── utils/                # Utilities (logger, errors, cache, etc.)
 │   └── types/                # TypeScript type definitions
 ├── tests/
@@ -1110,8 +1101,34 @@ Built with:
 
 ---
 
-**Version**: 0.2.0  
-**Last Updated**: 2025-12-02
+**Version**: 0.2.2  
+**Last Updated**: 2025-12-04
+
+---
+
+## 🆕 What's New in v0.2.2
+
+### New Tool: `get_report`
+A new tool to retrieve the full content of a specific report. Previously, `search_reports` and `list_command_reports` only returned metadata and excerpts. Now you can get the complete report content.
+
+**Usage**:
+```json
+{
+  "command_name": "analyze_zoom_speech_sdk_log",
+  "report_name": "report_20251120.md"
+}
+```
+
+### Removed: `upload_report` (Legacy)
+The deprecated `upload_report` tool has been removed. Use `report_feedback` instead, which provides:
+- ✅ User confirmation before upload
+- ✅ Option to save locally only
+- ✅ Better user experience
+
+### Unified Report Directory Naming
+Report directories now use the command name directly without any suffix:
+- ✅ New: `analyze_zoom_speech_sdk_log/`
+- ❌ Old: `analyze_zoom_speech_sdk_log-reports/`
 
 ---
 

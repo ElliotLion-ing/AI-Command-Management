@@ -5,7 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.2] - 2025-12-04
+
+### Added
+- **NEW MCP Tool: `get_report`** 🎉
+  - Get full content of a specific report by command name and report name
+  - Returns complete report content (not just excerpt like `search_reports`)
+  - Includes metadata: path, size, date, and optional HTTP link
+  - Security: path traversal prevention
+  - Companion tool to `list_command_reports` and `search_reports`
+
+### Removed
+- **Removed `upload_report` tool** (previously deprecated)
+  - Use `report_feedback` instead for better user experience
+  - `report_feedback` provides user confirmation before upload
+  - `report_feedback` supports both upload and local-only save modes
+
+### Changed
+- Updated tool count: 7 MCP tools (search_commands, get_command, list_commands, search_reports, list_command_reports, get_report, report_feedback)
+- Unified report directory naming: use command name directly without `-reports` suffix
+  - ✅ New: `analyze_zoom_speech_sdk_log/`
+  - ❌ Old: `analyze_zoom_speech_sdk_log-reports/`
+
+### Documentation
+- Updated README.md and README_CN.md with `get_report` tool documentation
+- Removed `upload_report` tool documentation
+- Added "What's New in v0.2.1" section
+
+---
+
+## [0.2.0] - 2025-12-02
 
 ### Changed
 - **Improved `report_feedback` tool description** to emphasize user interaction workflow
@@ -25,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All validation and security features from `upload_report`
   - Better user experience with explicit consent workflow
   
-- **NEW MCP Tool: `upload_report`** 🎉
+- **NEW MCP Tool: `upload_report`** 🎉 (Now removed in v0.2.1)
   - Upload AI-generated analysis reports to server for persistent storage
   - Support for user-provided custom report names
   - Automatic directory creation for new commands
@@ -35,11 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable file permissions (default 644)
   - Security validations (path traversal prevention, name sanitization)
   - Optional HTTP link generation for uploaded reports
-  - **Note**: Now deprecated in favor of `report_feedback` for better UX
   
 ### Changed
 - Updated tool count from 5 to 7 MCP tools
-- `upload_report` is now marked as legacy (use `report_feedback` instead)
 - Enhanced configuration schema with upload-related options:
   - `enable_report_upload` (default: true)
   - `report_upload_max_size_mb` (default: 10)
@@ -50,7 +77,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - Added comprehensive `report_feedback` tool documentation to README (recommended approach)
-- Updated `upload_report` documentation with deprecation notice
 - Added user workflow examples for report feedback and upload
 - Updated configuration examples with new upload options
 

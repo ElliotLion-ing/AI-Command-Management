@@ -25,8 +25,8 @@ import { handleGetCommand } from './tools/get-command';
 import { handleListCommands } from './tools/list-commands';
 import { handleSearchReports } from './tools/search-reports';
 import { handleListCommandReports } from './tools/list-command-reports';
-import { handleUploadReport } from './tools/upload-report';
 import { handleReportFeedback } from './tools/report-feedback';
+import { handleGetReport } from './tools/get-report';
 
 /**
  * Main server class
@@ -207,51 +207,47 @@ class ACMTServer {
             },
           },
           {
-            name: 'report_feedback',
-            description: '**[AUTO-TRIGGER AFTER ANALYSIS]** Handle report saving after user confirmation. **WHEN TO USE**: Automatically call this tool whenever ANY analysis command generates a report file. **WORKFLOW**: 1) Analysis tool completes and saves report → 2) AI reads the report file content → 3) AI MUST ASK user: "分析报告已生成，是否要上传到服务器保存？（输入 \'是\' 上传 / \'否\' 仅本地保存）" → 4) Wait for user response → 5) Call this tool with user_wants_upload=true/false based on user\'s answer. **CRITICAL**: This tool MUST be called after every analysis command that generates a report. DO NOT skip this step!',
+            name: 'get_report',
+            description: 'Get full content of a specific report by command name and report name',
             inputSchema: {
               type: 'object',
               properties: {
                 command_name: {
                   type: 'string',
-                  description: 'Name of the command that generated the report (e.g., "analyze_zoom_speech_sdk_log")',
-                },
-                report_content: {
-                  type: 'string',
-                  description: 'Full report content in Markdown format',
+                  description: 'Command name that the report belongs to',
                 },
                 report_name: {
                   type: 'string',
-                  description: 'Optional custom name for the report (user-provided). If not provided, uses default format: {command}_报告_{timestamp}_v1.md',
-                },
-                user_wants_upload: {
-                  type: 'boolean',
-                  description: 'User\'s decision after being asked. true = user confirmed upload to server, false = user wants local save only. **CRITICAL**: AI MUST ask user first and get explicit confirmation before setting this value. Do NOT assume or decide for the user!',
+                  description: 'Report filename (e.g., "analyze_zoom_speech_sdk_log_报告_20251126_141059_v1.md")',
                 },
               },
-              required: ['command_name', 'report_content', 'user_wants_upload'],
+              required: ['command_name', 'report_name'],
             },
           },
           {
-            name: 'upload_report',
-            description: '[DEPRECATED - Use report_feedback instead] Direct upload of analysis report to server. This tool is kept for backward compatibility, but report_feedback is now the recommended approach as it provides user control.',
+            name: 'report_feedback',
+            description: 'Handle report upload/save operations. **TWO USAGE SCENARIOS**: (1) **[AUTO-TRIGGER]** After analysis command generates a report - AI should ask user first before uploading; (2) **[USER REQUEST]** When user explicitly asks to upload/submit a report (e.g., "帮我提交这个报告", "上传报告") - set user_wants_upload=true directly. **WORKFLOW FOR SCENARIO 1**: Analysis completes → AI asks user "是否上传?" → Wait for response → Call with user_wants_upload based on answer. **WORKFLOW FOR SCENARIO 2**: User requests upload → Read report content → Call with user_wants_upload=true.',
             inputSchema: {
               type: 'object',
               properties: {
                 command_name: {
                   type: 'string',
-                  description: 'Name of the command that generated the report (e.g., "analyze_zoom_speech_sdk_log")',
+                  description: 'Name of the command/category for the report (e.g., "analyze_zoom_speech_sdk_log"). For user-requested uploads, use an appropriate command name based on the report content.',
                 },
                 report_content: {
                   type: 'string',
-                  description: 'Full report content in Markdown format',
+                  description: 'Full report content in Markdown format. For user-requested uploads, read the file content first.',
                 },
                 report_name: {
                   type: 'string',
-                  description: 'Optional custom name for the report (user-provided). If not provided, uses default format: {command}_报告_{timestamp}_v1.md',
+                  description: 'Optional custom name for the report. If not provided, uses default format: {command}_报告_{timestamp}_v1.md',
+                },
+                user_wants_upload: {
+                  type: 'boolean',
+                  description: 'true = upload to server, false = save locally only. For auto-trigger scenario, ask user first. For user-requested uploads, set to true directly.',
                 },
               },
-              required: ['command_name', 'report_content'],
+              required: ['command_name', 'report_content', 'user_wants_upload'],
             },
           },
         ],
@@ -302,15 +298,17 @@ class ACMTServer {
             );
             break;
 
-          case 'report_feedback':
-            result = await handleReportFeedback(
+          case 'get_report':
+            result = await handleGetReport(
               args as never,
-              this.reportUploader
+              this.reportFinder,
+              this.reportLinker,
+              this.config.reports_directory
             );
             break;
 
-          case 'upload_report':
-            result = await handleUploadReport(
+          case 'report_feedback':
+            result = await handleReportFeedback(
               args as never,
               this.reportUploader
             );
