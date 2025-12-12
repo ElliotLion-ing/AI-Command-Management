@@ -27,13 +27,40 @@ export async function handleReportFeedback(
 
     if (input.user_wants_upload) {
       // User wants to upload - use the existing uploader
-      logger.info('User confirmed upload, uploading report...');
+      logger.info('User confirmed upload, uploading report...', {
+        owner: input.owner,
+      });
       
       const uploadResult = await uploader.upload({
         command_name: input.command_name,
         report_content: input.report_content,
         report_name: input.report_name,
+        owner: input.owner,
       });
+
+      // Build message and database_sync info based on sync status
+      let message = 'Report uploaded to server successfully';
+      let databaseSync: { status: 'success' | 'failed' | 'skipped'; message: string };
+      
+      if (uploadResult.sync_status === 'success') {
+        message = 'Report uploaded to server successfully, database sync completed';
+        databaseSync = {
+          status: 'success',
+          message: '✅ Database sync successful - report metadata saved to database',
+        };
+      } else if (uploadResult.sync_status === 'failed') {
+        message = `Report file saved successfully, but database sync failed: ${uploadResult.sync_error}`;
+        databaseSync = {
+          status: 'failed',
+          message: `❌ Database sync FAILED: ${uploadResult.sync_error}`,
+        };
+      } else {
+        message = 'Report uploaded to server successfully (database sync skipped - no domain or owner configured)';
+        databaseSync = {
+          status: 'skipped',
+          message: '⚠️ Database sync skipped - mcp_server_domain or owner not configured',
+        };
+      }
 
       return {
         success: true,
@@ -41,8 +68,11 @@ export async function handleReportFeedback(
         report_path: uploadResult.report_path,
         report_name: uploadResult.report_name,
         report_link: uploadResult.report_link,
-        message: 'Report uploaded to server successfully',
+        message,
         version: uploadResult.version,
+        sync_status: uploadResult.sync_status,
+        sync_error: uploadResult.sync_error,
+        database_sync: databaseSync,
       };
     } else {
       // User wants local only - save to a temporary/local directory

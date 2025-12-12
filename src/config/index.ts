@@ -28,6 +28,7 @@ const DEFAULT_CONFIG: ConfigSchema = {
   report_auto_versioning: true,
   report_file_permissions: '644',
   log_level: 'info',
+  mcp_server_domain: '',
 };
 
 /**
@@ -50,13 +51,30 @@ class ConfigManager {
     let fileConfig: Partial<ConfigSchema> = {};
 
     try {
-      const result = await explorer.search();
+      // Check for CONFIG_PATH environment variable first
+      const configPath = process.env.CONFIG_PATH;
+      let result;
+      
+      if (configPath) {
+        // Load from specified config file path
+        const resolvedPath = path.resolve(configPath);
+        console.log(`Loading config from CONFIG_PATH: ${resolvedPath}`);
+        result = await explorer.load(resolvedPath);
+      } else {
+        // Search for config file in default locations
+        result = await explorer.search();
+      }
+      
       if (result && !result.isEmpty) {
         fileConfig = result.config as Partial<ConfigSchema>;
+        console.log('Config loaded successfully:', {
+          path: result.filepath,
+          mcp_server_domain: fileConfig.mcp_server_domain,
+        });
       }
     } catch (error) {
       // Config file not found or invalid, use defaults
-      console.warn('Config file not found, using defaults and environment variables');
+      console.warn('Config file not found or invalid, using defaults and environment variables:', error);
     }
 
     // Merge with defaults
@@ -104,6 +122,9 @@ class ConfigManager {
     }
     if (process.env.AICMD_REPORT_FILE_PERMISSIONS) {
       mergedConfig.report_file_permissions = process.env.AICMD_REPORT_FILE_PERMISSIONS;
+    }
+    if (process.env.AICMD_MCP_SERVER_DOMAIN) {
+      mergedConfig.mcp_server_domain = process.env.AICMD_MCP_SERVER_DOMAIN;
     }
 
     // Validate configuration

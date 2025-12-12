@@ -12,6 +12,7 @@ import {
   ReportUploadError,
   ReportUploadConfig 
 } from '../types';
+import { ReportSyncer } from './syncer';
 
 /**
  * Report uploader class
@@ -20,10 +21,12 @@ import {
 export class ReportUploader {
   private reportsDirectory: string;
   private config: ReportUploadConfig;
+  private syncer: ReportSyncer;
 
-  constructor(reportsDirectory: string, config: ReportUploadConfig) {
+  constructor(reportsDirectory: string, config: ReportUploadConfig, serverDomain?: string) {
     this.reportsDirectory = reportsDirectory;
     this.config = config;
+    this.syncer = new ReportSyncer(serverDomain || '');
   }
 
   /**
@@ -49,13 +52,37 @@ export class ReportUploader {
       // 6. Set permissions
       await this.setFilePermissions(finalPath);
 
-      // 7. Generate result with conflict notification
+      // 7. Sync to remote database (after successful file write)
+      const reportName = path.basename(finalPath);
+      let syncStatus: 'success' | 'failed' | 'skipped' = 'skipped';
+      let syncError: string | undefined;
+
+      if (this.syncer.isEnabled() && input.owner) {
+        const syncResult = await this.syncer.sync(
+          input.command_name,
+          reportName,
+          input.owner
+        );
+        syncStatus = syncResult.success ? 'success' : 'failed';
+        syncError = syncResult.error;
+      } else if (!this.syncer.isEnabled()) {
+        logger.debug('Sync skipped: mcp_server_domain not configured');
+      } else if (!input.owner) {
+        logger.debug('Sync skipped: owner not provided');
+      }
+
+      // 8. Generate result with conflict notification
       const link = this.generateLink(finalPath);
       
-      // Build message based on whether there was a conflict
+      // Build message based on upload and sync status
       let message = 'Report uploaded successfully';
       if (hadConflict) {
-        message = `Report uploaded successfully (auto-versioned to v${version} to avoid name conflict)`;
+        message = `Report uploaded successfully (filename conflict detected, saved as _v${version})`;
+      }
+      if (syncStatus === 'success') {
+        message += ', database sync completed';
+      } else if (syncStatus === 'failed') {
+        message += `. Warning: File saved but database sync failed - ${syncError}`;
       }
 
       logger.info('Report uploaded successfully', {
@@ -64,15 +91,18 @@ export class ReportUploader {
         size: input.report_content.length,
         version,
         hadConflict,
+        syncStatus,
       });
 
       return {
         success: true,
         report_path: finalPath,
-        report_name: path.basename(finalPath),
+        report_name: reportName,
         report_link: link,
         message,
         version,
+        sync_status: syncStatus,
+        sync_error: syncError,
       };
     } catch (error) {
       logger.error('Report upload failed', error as Error, {
@@ -116,8 +146,14 @@ export class ReportUploader {
 
     // Validate custom report name if provided
     if (input.report_name) {
-      // Check for invalid characters
-      if (!/^[a-zA-Z0-9_\u4e00-\u9fa5\s-]+$/.test(input.report_name)) {
+      // Strip .md suffix before validation (will be added back in generateFileName)
+      let nameToValidate = input.report_name.trim();
+      if (nameToValidate.toLowerCase().endsWith('.md')) {
+        nameToValidate = nameToValidate.slice(0, -3);
+      }
+      
+      // Check for invalid characters (after removing .md suffix)
+      if (!/^[a-zA-Z0-9_\u4e00-\u9fa5\s-]+$/.test(nameToValidate)) {
         throw new ReportUploadError(
           'Invalid report name: must contain only letters, numbers, Chinese characters, underscores, hyphens, and spaces',
           'INVALID_REPORT_NAME',
@@ -125,11 +161,11 @@ export class ReportUploader {
         );
       }
       // Check length
-      if (input.report_name.length > 100) {
+      if (nameToValidate.length > 100) {
         throw new ReportUploadError(
           'Report name too long: maximum 100 characters',
           'REPORT_NAME_TOO_LONG',
-          { report_name_length: input.report_name.length }
+          { report_name_length: nameToValidate.length }
         );
       }
     }
@@ -172,22 +208,33 @@ export class ReportUploader {
   }
 
   /**
-   * Generate filename with timestamp
+   * Generate filename
+   * If user provides a custom name, use it directly (only add .md if missing)
+   * If no custom name, generate default format with timestamp
    */
   private generateFileName(commandName: string, customName?: string): string {
-    const now = new Date();
-    const timestamp = this.formatTimestamp(now);
-    
     if (customName) {
-      // Sanitize custom name (replace spaces and special chars)
-      const sanitized = customName
-        .trim()
-        .replace(/\s+/g, '_')       // Replace spaces with underscores
-        .replace(/[^\w\u4e00-\u9fa5-]/g, ''); // Keep only word chars, Chinese, hyphens
-      return `${commandName}_${sanitized}_${timestamp}_v1.md`;
+      // User provided a custom name - use it directly
+      let fileName = customName.trim();
+      
+      // Sanitize: replace spaces with underscores, remove invalid chars
+      // First strip .md suffix if present, sanitize, then add it back
+      const hasMdSuffix = fileName.toLowerCase().endsWith('.md');
+      if (hasMdSuffix) {
+        fileName = fileName.slice(0, -3);
+      }
+      fileName = fileName
+        .replace(/\s+/g, '_')
+        .replace(/[^\w\u4e00-\u9fa5-]/g, '');
+      
+      // Add .md extension
+      return `${fileName}.md`;
     }
     
-    return `${commandName}_报告_${timestamp}_v1.md`;
+    // No custom name - generate default format
+    const now = new Date();
+    const timestamp = this.formatTimestamp(now);
+    return `${commandName}_报告_${timestamp}.md`;
   }
 
   /**
@@ -206,6 +253,7 @@ export class ReportUploader {
 
   /**
    * Resolve version conflicts
+   * If file exists, add _v1, _v2, etc. suffix before .md extension
    * Returns both the final path and whether a conflict was detected
    */
   private async resolveVersionConflict(
@@ -216,37 +264,50 @@ export class ReportUploader {
       return {
         finalPath: path.join(directory, fileName),
         hadConflict: false,
-        version: 1,
+        version: 0,
       };
     }
 
-    let version = 1;
     let finalPath = path.join(directory, fileName);
+    
+    // First check if original file exists
+    try {
+      await fs.access(finalPath);
+    } catch {
+      // File doesn't exist, use original name (no version suffix needed)
+      return {
+        finalPath,
+        hadConflict: false,
+        version: 0,
+      };
+    }
+
+    // File exists, need to add version suffix
+    // Extract base name without .md extension
+    const baseName = fileName.replace(/\.md$/i, '');
+    let version = 1;
     let fileExists = true;
 
-    // Check if file exists and increment version until we find a free slot
     while (fileExists) {
+      const versionedFileName = `${baseName}_v${version}.md`;
+      finalPath = path.join(directory, versionedFileName);
+      
       try {
         await fs.access(finalPath);
-        // File exists, increment version
+        // Versioned file also exists, try next version
         version++;
-        const newFileName = fileName.replace(/_v\d+\.md$/, `_v${version}.md`);
-        finalPath = path.join(directory, newFileName);
       } catch {
-        // File doesn't exist, use this path
+        // This version doesn't exist, use it
         fileExists = false;
       }
     }
 
-    const hadConflict = version > 1;
-    if (hadConflict) {
-      logger.info('Version conflict resolved', {
-        original_file: fileName,
-        final_version: version,
-      });
-    }
+    logger.info('Version conflict resolved', {
+      original_file: fileName,
+      final_version: version,
+    });
 
-    return { finalPath, hadConflict, version };
+    return { finalPath, hadConflict: true, version };
   }
 
   /**

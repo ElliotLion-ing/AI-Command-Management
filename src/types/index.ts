@@ -27,6 +27,9 @@ export interface ConfigSchema {
   
   // Logging
   log_level: 'debug' | 'info' | 'warn' | 'error';
+  
+  // MCP Server settings
+  mcp_server_domain?: string;
 }
 
 /**
@@ -231,6 +234,7 @@ export interface UploadReportInput {
   command_name: string;
   report_content: string;
   report_name?: string; // Optional custom report name from user
+  owner?: string; // User email from Cursor client
 }
 
 export interface UploadReportOutput {
@@ -240,6 +244,8 @@ export interface UploadReportOutput {
   report_link?: string;
   message: string;
   version?: number;
+  sync_status?: 'success' | 'failed' | 'skipped'; // Sync API call status
+  sync_error?: string; // Error message if sync failed
 }
 
 /**
@@ -286,6 +292,7 @@ export interface ReportFeedbackInput {
   report_content: string;
   report_name?: string; // Optional custom report name from user
   user_wants_upload: boolean; // User decision: true = upload, false = local only
+  owner?: string; // User email from Cursor client
 }
 
 export interface ReportFeedbackOutput {
@@ -296,5 +303,26 @@ export interface ReportFeedbackOutput {
   report_link?: string; // Only present when uploaded
   message: string;
   version?: number; // Only present when uploaded
+  sync_status?: 'success' | 'failed' | 'skipped'; // Sync API call status
+  sync_error?: string; // Error message if sync failed
+  database_sync?: { // Detailed sync result for AI to display clearly
+    status: 'success' | 'failed' | 'skipped';
+    message: string;
+  };
+}
+
+/**
+ * Report sync API request/response types
+ */
+export interface ReportSyncRequest {
+  commandName: string;
+  reportName: string;
+  owner: string;
+}
+
+export interface ReportSyncResponse {
+  code: number;
+  msg: string;
+  data: unknown;
 }
 
