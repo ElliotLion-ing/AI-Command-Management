@@ -266,6 +266,7 @@ Create `.ai-command-tool.json` in your project root or home directory:
 | `report_upload_max_size_mb` | number | 10 | Maximum report size in MB 🆕 |
 | `report_auto_versioning` | boolean | true | Auto-increment version on conflicts 🆕 |
 | `report_file_permissions` | string | "644" | File permissions (octal string) 🆕 |
+| `mcp_server_domain` | string | "" | Remote API server domain for database sync 🆕 |
 | `log_level` | string | "info" | Log level: debug/info/warn/error |
 
 ### Environment Variables
@@ -284,6 +285,7 @@ AICMD_ENABLE_REPORT_UPLOAD=true
 AICMD_REPORT_UPLOAD_MAX_SIZE_MB=10
 AICMD_REPORT_AUTO_VERSIONING=true
 AICMD_REPORT_FILE_PERMISSIONS=644
+AICMD_MCP_SERVER_DOMAIN=https://your-api-server.com
 AICMD_LOG_LEVEL=info
 ```
 
@@ -1101,8 +1103,8 @@ Built with:
 
 ---
 
-**Version**: 0.2.2  
-**Last Updated**: 2025-12-04
+**Version**: 0.3.0  
+**Last Updated**: 2025-12-12
 
 ---
 
@@ -1170,3 +1172,41 @@ Commands now support YAML frontmatter for metadata storage, enabling:
 - Better organization and filtering
 
 **Powered by**: [gray-matter](https://github.com/jonschlinkert/gray-matter)
+
+---
+
+## 🆕 What's New in v0.3.0
+
+### Report Database Sync 🆕
+When uploading reports via `report_feedback`, the system now automatically syncs report metadata to a remote database. This enables centralized report tracking and management.
+
+**Configuration**:
+```json
+{
+  "mcp_server_domain": "https://your-api-server.com"
+}
+```
+
+**Features**:
+- ✅ Automatic sync after successful file upload
+- ✅ Owner email tracking (auto-detected from Cursor or manually provided)
+- ✅ Clear success/failure status feedback
+- ✅ Graceful degradation when sync is unavailable
+
+### Improved Version Suffix Logic 🆕
+Report filename handling has been improved:
+- **No conflict**: Uses original filename without version suffix
+- **With conflict**: Automatically adds `_v1`, `_v2`, etc.
+
+**Example**:
+```
+First upload:  MyReport.md        (no suffix)
+Second upload: MyReport_v1.md     (conflict detected)
+Third upload:  MyReport_v2.md     (conflict detected)
+```
+
+### Enhanced Owner Tracking 🆕
+The `report_feedback` tool now supports an `owner` parameter:
+- Auto-detected from Cursor client's cached email (macOS/Windows/Linux)
+- Falls back to asking user if auto-detection fails
+- Used for database sync to track report ownership

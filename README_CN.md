@@ -265,6 +265,7 @@ sudo systemctl start acmt-mcp
 | `report_upload_max_size_mb` | number | 10 | 报告最大大小（MB）🆕 |
 | `report_auto_versioning` | boolean | true | 冲突时自动增加版本 🆕 |
 | `report_file_permissions` | string | "644" | 文件权限（八进制字符串）🆕 |
+| `mcp_server_domain` | string | "" | 用于数据库同步的远程 API 服务器域名 🆕 |
 | `log_level` | string | "info" | 日志级别：debug/info/warn/error |
 
 ### 环境变量
@@ -283,6 +284,7 @@ AICMD_ENABLE_REPORT_UPLOAD=true
 AICMD_REPORT_UPLOAD_MAX_SIZE_MB=10
 AICMD_REPORT_AUTO_VERSIONING=true
 AICMD_REPORT_FILE_PERMISSIONS=644
+AICMD_MCP_SERVER_DOMAIN=https://your-api-server.com
 AICMD_LOG_LEVEL=info
 ```
 
@@ -1098,8 +1100,8 @@ MIT License - 详见 [LICENSE](LICENSE) 文件。
 
 ---
 
-**版本**：0.2.2  
-**最后更新**：2025-12-04
+**版本**：0.3.0  
+**最后更新**：2025-12-12
 
 ---
 
@@ -1167,4 +1169,42 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
 - 更好的组织和过滤
 
 **技术支持**：[gray-matter](https://github.com/jonschlinkert/gray-matter)
+
+---
+
+## 🆕 v0.3.0 新功能
+
+### 报告数据库同步 🆕
+通过 `report_feedback` 上传报告时，系统现在会自动将报告元数据同步到远程数据库。这实现了集中式报告跟踪和管理。
+
+**配置**：
+```json
+{
+  "mcp_server_domain": "https://your-api-server.com"
+}
+```
+
+**功能特性**：
+- ✅ 文件上传成功后自动同步
+- ✅ 所有者邮箱跟踪（自动从 Cursor 检测或手动提供）
+- ✅ 清晰的成功/失败状态反馈
+- ✅ 同步不可用时优雅降级
+
+### 改进的版本后缀逻辑 🆕
+报告文件名处理已改进：
+- **无冲突**：使用原始文件名，不添加版本后缀
+- **有冲突**：自动添加 `_v1`、`_v2` 等
+
+**示例**：
+```
+首次上传：MyReport.md        （无后缀）
+第二次上传：MyReport_v1.md     （检测到冲突）
+第三次上传：MyReport_v2.md     （检测到冲突）
+```
+
+### 增强的所有者跟踪 🆕
+`report_feedback` 工具现在支持 `owner` 参数：
+- 自动从 Cursor 客户端缓存的邮箱检测（macOS/Windows/Linux）
+- 自动检测失败时回退到询问用户
+- 用于数据库同步以跟踪报告所有权
 
