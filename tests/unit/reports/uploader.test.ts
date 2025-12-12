@@ -135,8 +135,8 @@ describe('ReportUploader', () => {
         report_content: '# Test',
       });
 
-      // Version may be v1 or higher due to previous test runs
-      expect(result.report_name).toMatch(/test_command_报告_\d{8}_\d{6}_v\d+\.md/);
+      // No conflict = no version suffix, format: test_command_报告_YYYYMMDD_HHMMSS.md
+      expect(result.report_name).toMatch(/test_command_报告_\d{8}_\d{6}\.md/);
     });
 
     it('should use custom report name', async () => {
@@ -161,18 +161,20 @@ describe('ReportUploader', () => {
   });
 
   describe('Version Conflict Resolution', () => {
-    it('should create v1 for first upload', async () => {
+    it('should create file without version suffix for first upload (no conflict)', async () => {
       const result = await uploader.upload({
         command_name: 'test_command',
         report_content: '# Test',
       });
 
-      expect(result.version).toBe(1);
-      expect(result.report_name).toContain('_v1.md');
+      // No conflict = version 0, no _v1 suffix
+      expect(result.version).toBe(0);
+      expect(result.report_name).toMatch(/\.md$/);
+      expect(result.report_name).not.toContain('_v1.md');
     });
 
     it('should auto-increment version on conflict', async () => {
-      // First upload
+      // First upload with custom name
       const result1 = await uploader.upload({
         command_name: 'test_command',
         report_content: '# Test 1',
@@ -180,27 +182,31 @@ describe('ReportUploader', () => {
       });
 
       expect(result1.success).toBe(true);
-      expect(result1.version).toBe(1);
+      // First upload has no conflict, version = 0
+      expect(result1.version).toBe(0);
+      expect(result1.report_name).toBe('conflict_test.md');
 
-      // Manually create a v1 file with the SAME timestamp to force a conflict
-      const dir = path.join(testReportsDir, 'test_command');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, 15);
-      const conflictFileName = `test_command_conflict_test_${timestamp.slice(0, 8)}_${timestamp.slice(9, 15)}_v1.md`;
-      const conflictPath = path.join(dir, conflictFileName);
-      await fs.writeFile(conflictPath, '# Existing v1');
-
-      // Second upload with same custom name and simulated same timestamp
-      // Should detect v1 exists and create v2
+      // Second upload with SAME name should conflict and get _v1
       const result2 = await uploader.upload({
         command_name: 'test_command',
-        report_content: '# Test 2 - should be v2',
+        report_content: '# Test 2 - should be v1',
         report_name: 'conflict_test',
       });
 
       expect(result2.success).toBe(true);
-      // Due to different timestamp, might be v1 or v2 depending on timing
-      // Let's just verify it succeeds and has a version
-      expect(result2.version).toBeGreaterThanOrEqual(1);
+      expect(result2.version).toBe(1);
+      expect(result2.report_name).toBe('conflict_test_v1.md');
+
+      // Third upload should get _v2
+      const result3 = await uploader.upload({
+        command_name: 'test_command',
+        report_content: '# Test 3 - should be v2',
+        report_name: 'conflict_test',
+      });
+
+      expect(result3.success).toBe(true);
+      expect(result3.version).toBe(2);
+      expect(result3.report_name).toBe('conflict_test_v2.md');
     });
   });
 
