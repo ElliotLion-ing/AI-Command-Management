@@ -29,6 +29,8 @@ import { handleSearchReports } from './tools/search-reports.js';
 import { handleListCommandReports } from './tools/list-command-reports.js';
 import { handleReportFeedback } from './tools/report-feedback.js';
 import { handleGetReport } from './tools/get-report.js';
+import { handleUploadCommand } from './tools/upload-command.js';
+import { CommandUploader } from './commands/uploader.js';
 
 /**
  * SSE Server class for remote MCP access
@@ -222,6 +224,15 @@ class ACMTSSEServer {
       },
       config.mcp_server_domain
     );
+    const commandUploader = new CommandUploader(
+      config.commands_directory,
+      {
+        enableUpload: config.enable_command_upload ?? true,
+        maxSizeMB: config.command_upload_max_size_mb ?? 5,
+        filePermissions: config.command_file_permissions ?? '644',
+      },
+      config.mcp_server_domain
+    );
     const searchEngine = new SearchEngine(
       config.reports_directory,
       config.cache_ttl_seconds,
@@ -346,6 +357,60 @@ class ACMTSSEServer {
               required: ['command_name', 'report_content', 'user_wants_upload'],
             },
           },
+          {
+            name: 'upload_command',
+            description: `Upload or update a command file. **WORKFLOW**:
+(1) **Auto-get user email FIRST** using sqlite3 command (see owner param). Only ask user if command fails.
+(2) If user wants to UPDATE existing command:
+    - Call list_commands to show available commands
+    - Ask user which command to update
+    - Ask for version bump type (patch/minor/major)
+    - Get the command file content (user provides or ask for it)
+    - If local filename differs from remote, notify user and use remote name
+    - Ask for releaseNote (optional)
+(3) If user wants to UPLOAD new command:
+    - Call list_commands to check if command already exists
+    - If exists, follow update flow (step 2)
+    - If not exists, use file name as commandName (ask user to confirm or change)
+    - Ask for version (default 1.0.0 for new commands)
+    - Ask for description (optional)
+(4) Call this tool with all collected info.
+**VERSION FORMAT**: patch=x.y.z+1, minor=x.y+1.0, major=x+1.0.0. First version: 1.0.0`,
+            inputSchema: {
+              type: 'object',
+              properties: {
+                command_name: {
+                  type: 'string',
+                  description: 'Name of the command (with or without .md extension). For updates, must match existing command name.',
+                },
+                command_content: {
+                  type: 'string',
+                  description: 'Full command content in Markdown format. Read from user-provided file.',
+                },
+                version: {
+                  type: 'string',
+                  description: 'Semantic version (e.g., "1.0.0"). For new commands, start with "1.0.0". For updates, increment based on user choice.',
+                },
+                owner: {
+                  type: 'string',
+                  description: '**MUST AUTO-GET FIRST!** Run sqlite3 command based on OS: **macOS**: `sqlite3 ~/Library/Application\\ Support/Cursor/User/globalStorage/state.vscdb "SELECT value FROM ItemTable WHERE key=\'cursorAuth/cachedEmail\';"` **Windows**: `sqlite3 %APPDATA%\\Cursor\\User\\globalStorage\\state.vscdb "SELECT value FROM ItemTable WHERE key=\'cursorAuth/cachedEmail\';"` **Linux**: `sqlite3 ~/.config/Cursor/User/globalStorage/state.vscdb "SELECT value FROM ItemTable WHERE key=\'cursorAuth/cachedEmail\';"` Only ask user if command fails.',
+                },
+                release_note: {
+                  type: 'string',
+                  description: 'Release notes for this version (for updates). Optional.',
+                },
+                description: {
+                  type: 'string',
+                  description: 'Command description (for new commands). Optional.',
+                },
+                is_new_command: {
+                  type: 'boolean',
+                  description: 'true if this is a new command, false if updating existing. Determined by list_commands check.',
+                },
+              },
+              required: ['command_name', 'command_content', 'version', 'owner'],
+            },
+          },
         ],
       };
     });
@@ -407,6 +472,13 @@ class ACMTSSEServer {
             result = await handleReportFeedback(
               args as never,
               reportUploader
+            );
+            break;
+
+          case 'upload_command':
+            result = await handleUploadCommand(
+              args as never,
+              commandUploader
             );
             break;
 

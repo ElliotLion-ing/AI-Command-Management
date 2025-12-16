@@ -1100,8 +1100,8 @@ MIT License - 详见 [LICENSE](LICENSE) 文件。
 
 ---
 
-**版本**：0.3.0  
-**最后更新**：2025-12-12
+**版本**：0.4.0  
+**最后更新**：2025-12-16
 
 ---
 
@@ -1207,4 +1207,56 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
 - 自动从 Cursor 客户端缓存的邮箱检测（macOS/Windows/Linux）
 - 自动检测失败时回退到询问用户
 - 用于数据库同步以跟踪报告所有权
+
+---
+
+## 🆕 v0.4.0 新功能
+
+### 新增工具：`upload_command` 🆕
+新增用于上传和更新命令文件的工具。这实现了带版本控制的集中式命令管理。
+
+**工作流程**：
+1. **自动获取用户邮箱** - 从 Cursor 客户端获取（失败则询问用户）
+2. **更新已有命令**：
+   - 调用 `list_commands` 展示可用命令
+   - 选择要更新的命令
+   - 选择版本类型（patch/minor/major）
+   - 提供 releaseNote
+3. **上传新命令**：
+   - 通过 `list_commands` 检查命令是否存在
+   - 确认命令名称
+   - 设置初始版本（默认：1.0.0）
+   - 提供描述
+
+**版本格式**：
+- `patch`：x.y.z → x.y.(z+1)
+- `minor`：x.y.z → x.(y+1).0
+- `major`：x.y.z → (x+1).0.0
+
+**输入示例**：
+```json
+{
+  "command_name": "my_new_command",
+  "command_content": "# My Command\n\n...",
+  "version": "1.0.0",
+  "owner": "user@example.com",
+  "description": "新命令的描述",
+  "release_note": "更新的发布说明"
+}
+```
+
+**功能特性**：
+- ✅ 上传新命令或更新已有命令
+- ✅ 语义化版本支持（patch/minor/major）
+- ✅ 通过 `/api/ai-commands/sync` 自动数据库同步
+- ✅ 所有者跟踪（自动从 Cursor 检测）
+- ✅ 文件名验证和规范化
+
+### 新增配置选项 🆕
+
+| 选项 | 类型 | 默认值 | 描述 |
+|-----|------|--------|------|
+| `enable_command_upload` | boolean | true | 启用/禁用命令上传功能 |
+| `command_upload_max_size_mb` | number | 5 | 命令文件最大大小（MB）|
+| `command_file_permissions` | string | "644" | 上传命令的文件权限 |
 

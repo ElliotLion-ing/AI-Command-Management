@@ -25,6 +25,11 @@ export interface ConfigSchema {
   report_auto_versioning?: boolean;
   report_file_permissions?: string;
   
+  // Command upload settings
+  enable_command_upload?: boolean;
+  command_upload_max_size_mb?: number;
+  command_file_permissions?: string;
+  
   // Logging
   log_level: 'debug' | 'info' | 'warn' | 'error';
   
@@ -324,5 +329,73 @@ export interface ReportSyncResponse {
   code: number;
   msg: string;
   data: unknown;
+}
+
+/**
+ * Command sync API request/response types
+ */
+export interface CommandSyncRequest {
+  commandName: string;
+  version: string;
+  releaseNote: string;
+  description: string;
+  owner: string;
+}
+
+export interface CommandSyncResponse {
+  code: number;
+  msg: string;
+  data: unknown;
+}
+
+/**
+ * MCP tool definition for upload_command
+ */
+export interface UploadCommandInput {
+  command_name: string;          // Name of the command (with or without .md)
+  command_content: string;       // Full markdown content
+  version: string;               // Semantic version (e.g., "1.0.0")
+  owner: string;                 // User email
+  release_note?: string;         // Release notes (for updates)
+  description?: string;          // Description (for new commands)
+  is_new_command?: boolean;      // Whether this is a new command or update
+}
+
+export interface UploadCommandOutput {
+  success: boolean;
+  command_path: string;
+  command_name: string;
+  message: string;
+  is_update: boolean;
+  version: string;
+  sync_status?: 'success' | 'failed' | 'skipped';
+  sync_error?: string;
+  database_sync?: {
+    status: 'success' | 'failed' | 'skipped';
+    message: string;
+  };
+}
+
+/**
+ * Command upload configuration
+ */
+export interface CommandUploadConfig {
+  enableUpload: boolean;
+  maxSizeMB: number;
+  filePermissions: string;
+}
+
+/**
+ * Command upload error with specific error codes
+ */
+export class CommandUploadError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly details?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = 'CommandUploadError';
+  }
 }
 

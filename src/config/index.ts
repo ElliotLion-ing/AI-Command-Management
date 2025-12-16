@@ -27,6 +27,9 @@ const DEFAULT_CONFIG: ConfigSchema = {
   report_upload_max_size_mb: 10,
   report_auto_versioning: true,
   report_file_permissions: '644',
+  enable_command_upload: true,
+  command_upload_max_size_mb: 5,
+  command_file_permissions: '644',
   log_level: 'info',
   mcp_server_domain: '',
 };

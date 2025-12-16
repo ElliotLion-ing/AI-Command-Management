@@ -1103,8 +1103,8 @@ Built with:
 
 ---
 
-**Version**: 0.3.0  
-**Last Updated**: 2025-12-12
+**Version**: 0.4.0  
+**Last Updated**: 2025-12-16
 
 ---
 
@@ -1210,3 +1210,55 @@ The `report_feedback` tool now supports an `owner` parameter:
 - Auto-detected from Cursor client's cached email (macOS/Windows/Linux)
 - Falls back to asking user if auto-detection fails
 - Used for database sync to track report ownership
+
+---
+
+## 🆕 What's New in v0.4.0
+
+### New Tool: `upload_command` 🆕
+A new tool for uploading and updating command files. This enables centralized command management with version control.
+
+**Workflow**:
+1. **Auto-get user email** from Cursor client (falls back to asking user)
+2. **For updates**: 
+   - Call `list_commands` to show available commands
+   - Select command to update
+   - Choose version bump type (patch/minor/major)
+   - Provide release notes
+3. **For new commands**:
+   - Check if command already exists via `list_commands`
+   - Confirm command name
+   - Set initial version (default: 1.0.0)
+   - Provide description
+
+**Version Format**:
+- `patch`: x.y.z → x.y.(z+1)
+- `minor`: x.y.z → x.(y+1).0
+- `major`: x.y.z → (x+1).0.0
+
+**Input**:
+```json
+{
+  "command_name": "my_new_command",
+  "command_content": "# My Command\n\n...",
+  "version": "1.0.0",
+  "owner": "user@example.com",
+  "description": "Description for new commands",
+  "release_note": "Release notes for updates"
+}
+```
+
+**Features**:
+- ✅ Upload new commands or update existing ones
+- ✅ Semantic versioning support (patch/minor/major)
+- ✅ Automatic database sync via `/api/ai-commands/sync`
+- ✅ Owner tracking with auto-detection from Cursor
+- ✅ File name validation and normalization
+
+### New Configuration Options 🆕
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_command_upload` | boolean | true | Enable/disable command upload feature |
+| `command_upload_max_size_mb` | number | 5 | Maximum command file size in MB |
+| `command_file_permissions` | string | "644" | File permissions for uploaded commands |
