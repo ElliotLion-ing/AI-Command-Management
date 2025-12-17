@@ -282,10 +282,27 @@ class ACMTServer {
 (3) If user wants to UPLOAD new command:
     - Call list_commands to check if command already exists
     - If exists, follow update flow (step 2)
-    - If not exists, use file name as commandName (ask user to confirm or change)
+    - **VALIDATE NAMING CONVENTION** (see below)
     - Ask for version (default 1.0.0 for new commands)
     - Ask for description (optional)
 (4) Call this tool with all collected info.
+
+**NAMING CONVENTION** (MUST validate before upload):
+Format: {Module}-xx-yy-zz
+- Module: Technical module name (case flexible)
+- xx-yy-zz: Descriptive parts separated by "-"
+- NO SPACES allowed in any part
+- NO redundant suffixes like "-command" or "-analysis"
+
+✅ VALID: zNet-proxy-slow-meeting-join, ZMDB-log-analyze, SpeechSDK-log-analyze, Tool-code-review-self
+❌ INVALID: proxy-slow-meeting-analysis-command (missing Module prefix), Tool-code review-self (contains space)
+
+If name is INVALID:
+1. Tell user: "当前命名不符合规则：{问题描述}"
+2. Explain the naming convention
+3. Auto-generate a valid name suggestion based on the content
+4. Ask user: "建议使用 {suggested_name}，是否同意？或请提供符合规则的名称。"
+
 **VERSION FORMAT**: patch=x.y.z+1, minor=x.y+1.0, major=x+1.0.0. First version: 1.0.0`,
             inputSchema: {
               type: 'object',

@@ -134,12 +134,39 @@ export class CommandUploader {
       nameToValidate = nameToValidate.slice(0, -3);
     }
     
+    // Basic character validation
     if (!/^[a-zA-Z0-9_-]+$/.test(nameToValidate)) {
       throw new CommandUploadError(
-        'Invalid command name: must contain only alphanumeric characters, underscores, and hyphens',
+        'Invalid command name: must contain only alphanumeric characters, underscores, and hyphens (no spaces allowed)',
         'INVALID_COMMAND_NAME',
         { command_name: input.command_name }
       );
+    }
+
+    // Validate naming convention: {Module}-xx-yy-zz format
+    // Check if name has at least one hyphen (Module prefix required)
+    if (!nameToValidate.includes('-')) {
+      throw new CommandUploadError(
+        'Invalid command name format: must follow {Module}-xx-yy-zz convention. Missing Module prefix and hyphen separator.',
+        'INVALID_NAMING_CONVENTION',
+        { 
+          command_name: input.command_name,
+          rule: 'Format: {Module}-xx-yy-zz, e.g., zNet-proxy-slow-meeting-join, ZMDB-log-analyze'
+        }
+      );
+    }
+
+    // Check for redundant suffixes
+    const redundantSuffixes = ['-command', '-analysis', '-tool', '-script'];
+    for (const suffix of redundantSuffixes) {
+      if (nameToValidate.toLowerCase().endsWith(suffix)) {
+        logger.warn('Command name has redundant suffix', {
+          command_name: nameToValidate,
+          redundant_suffix: suffix,
+          suggestion: nameToValidate.slice(0, -suffix.length)
+        });
+        // Just warn, don't throw - let AI handle the suggestion
+      }
     }
 
     // Validate content size
