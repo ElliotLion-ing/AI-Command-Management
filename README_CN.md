@@ -1251,6 +1251,36 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
 - ✅ 通过 `/api/ai-commands/sync` 自动数据库同步
 - ✅ 所有者跟踪（自动从 Cursor 检测）
 - ✅ 文件名验证和规范化
+- ✅ 命令命名规范强制检查
+
+### 命令命名规范 🆕
+命令必须遵循特定的命名格式以保持一致性：
+
+**格式**：`{Module}-xx-yy-zz`
+- **Module**：技术模块名称（大小写灵活）
+- **xx-yy-zz**：用 `-` 分隔的描述部分
+- 任何部分**不允许空格**
+- **不需要冗余后缀**如 `-command` 或 `-analysis`
+
+**示例**：
+```
+✅ 正确示例：
+   zNet-proxy-slow-meeting-join
+   ZMDB-log-analyze
+   SpeechSDK-log-analyze
+   Tool-code-review-self
+
+❌ 错误示例：
+   proxy-slow-meeting-analysis-command  (缺少 Module 前缀)
+   Tool-code review-self                (包含空格)
+```
+
+**验证行为**：
+如果名称不符合规范，AI 会：
+1. 提示用户："当前命名不符合规则：{问题描述}"
+2. 阐述命名规范
+3. 自动生成符合规范的名称建议
+4. 询问："建议使用 {建议名称}，是否同意？"
 
 ### 新增配置选项 🆕
 

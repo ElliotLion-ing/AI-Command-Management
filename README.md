@@ -1254,6 +1254,36 @@ A new tool for uploading and updating command files. This enables centralized co
 - ✅ Automatic database sync via `/api/ai-commands/sync`
 - ✅ Owner tracking with auto-detection from Cursor
 - ✅ File name validation and normalization
+- ✅ Command naming convention enforcement
+
+### Command Naming Convention 🆕
+Commands must follow a specific naming format for consistency:
+
+**Format**: `{Module}-xx-yy-zz`
+- **Module**: Technical module name (case flexible)
+- **xx-yy-zz**: Descriptive parts separated by `-`
+- **No spaces** allowed in any part
+- **No redundant suffixes** like `-command` or `-analysis`
+
+**Examples**:
+```
+✅ VALID:
+   zNet-proxy-slow-meeting-join
+   ZMDB-log-analyze
+   SpeechSDK-log-analyze
+   Tool-code-review-self
+
+❌ INVALID:
+   proxy-slow-meeting-analysis-command  (missing Module prefix)
+   Tool-code review-self                (contains space)
+```
+
+**Validation Behavior**:
+If a name is invalid, the AI will:
+1. Notify user: "当前命名不符合规则：{issue}"
+2. Explain the naming convention
+3. Auto-generate a valid name suggestion
+4. Ask: "建议使用 {suggested_name}，是否同意？"
 
 ### New Configuration Options 🆕
 
