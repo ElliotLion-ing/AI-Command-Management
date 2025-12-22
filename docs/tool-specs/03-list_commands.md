@@ -215,3 +215,4 @@ Default sort order: Alphabetical by command name (case-insensitive)
 - `search_commands`: Search for specific commands
 - `get_command`: Get full details of a command
 
+

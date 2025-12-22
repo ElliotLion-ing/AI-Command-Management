@@ -1185,10 +1185,61 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
 ```
 
 **功能特性**：
-- ✅ 文件上传成功后自动同步
+- ✅ Sync 在文件上传**之前**执行（符合 Sync-Mechanism-Requirements）
+- ✅ Sync 失败时停止文件上传操作
 - ✅ 所有者邮箱跟踪（自动从 Cursor 检测或手动提供）
-- ✅ 清晰的成功/失败状态反馈
-- ✅ 同步不可用时优雅降级
+- ✅ 每次同步尝试都有清晰的成功/失败状态反馈
+- ✅ 自动重试机制（最多 4 次尝试）
+
+### Sync 重试机制 🆕
+同步过程现在包含健壮的重试机制：
+
+**前置条件检查（不重试）**：
+- `mcp_server_domain` 未配置 → 立即停止
+- `owner` 未提供 → 立即停止
+- `owner` 邮箱格式无效 → 立即停止
+
+**重试逻辑**：
+- 首次尝试 + 最多 3 次重试（共 4 次尝试）
+- 重试间隔 1 秒
+- 任意一次成功 → 继续文件上传
+- 所有尝试失败 → 停止文件上传，显示详细错误
+
+**输出示例**：
+
+*成功（首次尝试）*：
+```
+✅ Sync 请求成功 (第1次尝试)
+
+✅ 数据库同步成功，报告元数据已记录到 ZCT 数据库
+```
+
+*成功（重试后）*：
+```
+❌ Sync 请求失败 (第1次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第2次): HTTP 503 - Service Unavailable
+✅ Sync 请求成功 (第3次尝试)
+
+✅ 数据库同步成功，报告元数据已记录到 ZCT 数据库
+```
+
+*失败（重试耗尽）*：
+```
+❌ Sync 请求失败 (第1次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第2次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第3次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第4次): HTTP 500 - Internal Server Error
+
+⛔ Sync 到 ZCT 数据库失败
+错误信息: HTTP 500 - Internal Server Error
+已停止 Command/Report 上传操作
+```
+
+*前置条件失败*：
+```
+⛔ Sync 失败: 未配置 mcp_server_domain
+已停止所有后续操作
+```
 
 ### 改进的版本后缀逻辑 🆕
 报告文件名处理已改进：
@@ -1225,7 +1276,7 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
 3. **上传新命令**：
    - 通过 `list_commands` 检查命令是否存在
    - 确认命令名称
-   - 设置初始版本（默认：1.0.0）
+   - 设置初始版本（默认：0.0.1）
    - 提供描述
 
 **版本格式**：
@@ -1238,7 +1289,7 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
 {
   "command_name": "my_new_command",
   "command_content": "# My Command\n\n...",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "owner": "user@example.com",
   "description": "新命令的描述",
   "release_note": "更新的发布说明"

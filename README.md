@@ -1188,10 +1188,61 @@ When uploading reports via `report_feedback`, the system now automatically syncs
 ```
 
 **Features**:
-- ✅ Automatic sync after successful file upload
+- ✅ Sync executed BEFORE file upload (per Sync-Mechanism-Requirements)
+- ✅ Sync failure stops file upload operation
 - ✅ Owner email tracking (auto-detected from Cursor or manually provided)
-- ✅ Clear success/failure status feedback
-- ✅ Graceful degradation when sync is unavailable
+- ✅ Clear success/failure status feedback for every sync attempt
+- ✅ Automatic retry mechanism (up to 4 attempts)
+
+### Sync Retry Mechanism 🆕
+The sync process now includes a robust retry mechanism:
+
+**Precondition Checks (No Retry)**:
+- `mcp_server_domain` not configured → Stop immediately
+- `owner` not provided → Stop immediately  
+- `owner` invalid email format → Stop immediately
+
+**Retry Logic**:
+- First attempt + up to 3 retries (4 total attempts)
+- 1 second delay between retries
+- Success on any attempt → Continue with file upload
+- All attempts fail → Stop file upload, show detailed error
+
+**Output Examples**:
+
+*Success (first attempt)*:
+```
+✅ Sync 请求成功 (第1次尝试)
+
+✅ 数据库同步成功，报告元数据已记录到 ZCT 数据库
+```
+
+*Success (after retries)*:
+```
+❌ Sync 请求失败 (第1次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第2次): HTTP 503 - Service Unavailable
+✅ Sync 请求成功 (第3次尝试)
+
+✅ 数据库同步成功，报告元数据已记录到 ZCT 数据库
+```
+
+*Failure (all retries exhausted)*:
+```
+❌ Sync 请求失败 (第1次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第2次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第3次): HTTP 500 - Internal Server Error
+❌ Sync 请求失败 (第4次): HTTP 500 - Internal Server Error
+
+⛔ Sync 到 ZCT 数据库失败
+错误信息: HTTP 500 - Internal Server Error
+已停止 Command/Report 上传操作
+```
+
+*Precondition failure*:
+```
+⛔ Sync 失败: 未配置 mcp_server_domain
+已停止所有后续操作
+```
 
 ### Improved Version Suffix Logic 🆕
 Report filename handling has been improved:
@@ -1228,7 +1279,7 @@ A new tool for uploading and updating command files. This enables centralized co
 3. **For new commands**:
    - Check if command already exists via `list_commands`
    - Confirm command name
-   - Set initial version (default: 1.0.0)
+   - Set initial version (default: 0.0.1)
    - Provide description
 
 **Version Format**:
@@ -1241,7 +1292,7 @@ A new tool for uploading and updating command files. This enables centralized co
 {
   "command_name": "my_new_command",
   "command_content": "# My Command\n\n...",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "owner": "user@example.com",
   "description": "Description for new commands",
   "release_note": "Release notes for updates"

@@ -27,7 +27,9 @@ export async function handleReportFeedback(
 
     if (input.user_wants_upload) {
       // User wants to upload - use the existing uploader
-      logger.info('User confirmed upload, uploading report...', {
+      // Per Sync-Mechanism-Requirements.md: sync is executed BEFORE file upload
+      // If sync fails, upload is aborted and success=false is returned
+      logger.info('User confirmed upload, starting sync and upload process...', {
         owner: input.owner,
       });
       
@@ -38,41 +40,38 @@ export async function handleReportFeedback(
         owner: input.owner,
       });
 
-      // Build message and database_sync info based on sync status
-      let message = 'Report uploaded to server successfully';
-      let databaseSync: { status: 'success' | 'failed' | 'skipped'; message: string };
-      
-      if (uploadResult.sync_status === 'success') {
-        message = 'Report uploaded to server successfully, database sync completed';
-        databaseSync = {
-          status: 'success',
-          message: '✅ Database sync successful - report metadata saved to database',
-        };
-      } else if (uploadResult.sync_status === 'failed') {
-        message = `Report file saved successfully, but database sync failed: ${uploadResult.sync_error}`;
-        databaseSync = {
-          status: 'failed',
-          message: `❌ Database sync FAILED: ${uploadResult.sync_error}`,
-        };
-      } else {
-        message = 'Report uploaded to server successfully (database sync skipped - no domain or owner configured)';
-        databaseSync = {
-          status: 'skipped',
-          message: '⚠️ Database sync skipped - mcp_server_domain or owner not configured',
+      // Check if upload succeeded (sync succeeded and file was written)
+      if (!uploadResult.success) {
+        // Sync failed, upload was aborted
+        logger.warn('Report upload aborted due to sync failure', {
+          command_name: input.command_name,
+          sync_status: uploadResult.sync_status,
+          sync_error: uploadResult.sync_error,
+        });
+
+        return {
+          success: false,
+          action_taken: 'uploaded',
+          report_path: '',
+          report_name: uploadResult.report_name,
+          message: uploadResult.message,
+          sync_status: uploadResult.sync_status,
+          sync_error: uploadResult.sync_error,
+          database_sync: uploadResult.database_sync,
         };
       }
 
+      // Upload succeeded - sync passed and file was written
       return {
         success: true,
         action_taken: 'uploaded',
         report_path: uploadResult.report_path,
         report_name: uploadResult.report_name,
         report_link: uploadResult.report_link,
-        message,
+        message: uploadResult.message,
         version: uploadResult.version,
         sync_status: uploadResult.sync_status,
-        sync_error: uploadResult.sync_error,
-        database_sync: databaseSync,
+        database_sync: uploadResult.database_sync,
       };
     } else {
       // User wants local only - save to a temporary/local directory

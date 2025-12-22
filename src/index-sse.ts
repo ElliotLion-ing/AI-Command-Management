@@ -372,7 +372,7 @@ class ACMTSSEServer {
     - Call list_commands to check if command already exists
     - If exists, follow update flow (step 2)
     - **VALIDATE NAMING CONVENTION** (see below)
-    - Ask for version (default 1.0.0 for new commands)
+    - Ask for version (default 0.0.1 for new commands)
     - Ask for description (optional)
 (4) Call this tool with all collected info.
 
@@ -392,7 +392,7 @@ If name is INVALID:
 3. Auto-generate a valid name suggestion based on the content
 4. Ask user: "建议使用 {suggested_name}，是否同意？或请提供符合规则的名称。"
 
-**VERSION FORMAT**: patch=x.y.z+1, minor=x.y+1.0, major=x+1.0.0. First version: 1.0.0`,
+**VERSION FORMAT**: patch=x.y.z+1, minor=x.y+1.0, major=x+1.0.0. First version: 0.0.1`,
             inputSchema: {
               type: 'object',
               properties: {
@@ -406,7 +406,7 @@ If name is INVALID:
                 },
                 version: {
                   type: 'string',
-                  description: 'Semantic version (e.g., "1.0.0"). For new commands, start with "1.0.0". For updates, increment based on user choice.',
+                  description: 'Semantic version (e.g., "0.0.1"). For new commands, start with "0.0.1". For updates, increment based on user choice.',
                 },
                 owner: {
                   type: 'string',

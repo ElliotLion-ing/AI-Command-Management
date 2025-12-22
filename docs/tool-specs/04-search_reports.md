@@ -193,3 +193,4 @@ Otherwise, use file:// URL or omit link.
 - `get_report`: Get full content of a specific report
 - `search_commands`: Find commands that might generate relevant reports
 
+

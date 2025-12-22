@@ -282,3 +282,4 @@ async function resolveVersionConflict(directory, filename) {
 - `list_command_reports`: List reports for a command
 - `get_report`: Get full content of a report
 
+

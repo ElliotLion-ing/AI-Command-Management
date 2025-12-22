@@ -51,29 +51,21 @@ export async function handleUploadCommand(
   }
 
   // Execute upload
+  // Per Sync-Mechanism-Requirements.md: sync is executed BEFORE file upload
+  // If sync fails, upload is aborted and success=false is returned
   const result = await uploader.upload(input);
 
-  // Build detailed database sync info for AI to display
-  let databaseSync: UploadCommandOutput['database_sync'];
-  if (result.sync_status === 'success') {
-    databaseSync = {
-      status: 'success',
-      message: '数据库同步成功',
-    };
-  } else if (result.sync_status === 'failed') {
-    databaseSync = {
-      status: 'failed',
-      message: `数据库同步失败: ${result.sync_error}`,
-    };
-  } else {
-    databaseSync = {
-      status: 'skipped',
-      message: '数据库同步已跳过（未配置 mcp_server_domain 或 owner）',
-    };
+  // Check if upload succeeded (sync succeeded and file was written)
+  if (!result.success) {
+    // Sync failed, upload was aborted
+    logger.warn('Command upload aborted due to sync failure', {
+      command_name: input.command_name,
+      version: input.version,
+      sync_status: result.sync_status,
+      sync_error: result.sync_error,
+    });
   }
 
-  return {
-    ...result,
-    database_sync: databaseSync,
-  };
+  // Result already includes database_sync from uploader with detailed attempt history
+  return result;
 }

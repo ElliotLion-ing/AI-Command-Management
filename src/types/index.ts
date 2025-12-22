@@ -251,6 +251,10 @@ export interface UploadReportOutput {
   version?: number;
   sync_status?: 'success' | 'failed' | 'skipped'; // Sync API call status
   sync_error?: string; // Error message if sync failed
+  database_sync?: {
+    status: 'success' | 'failed' | 'skipped';
+    message: string;
+  };
 }
 
 /**
@@ -397,5 +401,49 @@ export class CommandUploadError extends Error {
     super(message);
     this.name = 'CommandUploadError';
   }
+}
+
+/**
+ * Sync retry mechanism types
+ */
+
+/**
+ * Individual sync attempt record
+ */
+export interface SyncAttempt {
+  attempt_number: number;      // 1-based attempt number
+  success: boolean;
+  timestamp: Date;
+  http_status?: number;        // HTTP status code if applicable
+  error_message?: string;      // Error message if failed
+}
+
+/**
+ * Sync result with retry history
+ */
+export interface SyncResult {
+  success: boolean;
+  total_attempts: number;      // Total number of attempts made
+  attempts: SyncAttempt[];     // History of all attempts
+  final_error?: string;        // Final error message if all attempts failed
+  precondition_failed?: boolean; // True if failed due to precondition (no retry)
+  precondition_error?: string; // Precondition error message
+}
+
+/**
+ * Sync precondition check result
+ */
+export interface SyncPreconditionResult {
+  passed: boolean;
+  error_type?: 'DOMAIN_NOT_CONFIGURED' | 'OWNER_NOT_PROVIDED' | 'OWNER_INVALID_FORMAT';
+  error_message?: string;
+}
+
+/**
+ * Sync retry configuration
+ */
+export interface SyncRetryConfig {
+  max_retries: number;         // Maximum number of retries (not including first attempt)
+  retry_delay_ms: number;      // Delay between retries
 }
 

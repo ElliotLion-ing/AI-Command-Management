@@ -1,6 +1,7 @@
 /**
  * Report uploader module
  * Handles report file uploads with validation, versioning, and atomic operations
+ * Per Sync-Mechanism-Requirements.md: Sync BEFORE file upload, stop on failure
  */
 
 import * as fs from 'fs/promises';
@@ -31,59 +32,70 @@ export class ReportUploader {
 
   /**
    * Upload a report to the filesystem
+   * IMPORTANT: Sync is performed BEFORE file upload per requirements
    */
   async upload(input: UploadReportInput): Promise<UploadReportOutput> {
     try {
       // 1. Validate input
       this.validateInput(input);
 
-      // 2. Prepare directory
+      // 2. Prepare directory (for determining filename)
       const reportDir = await this.prepareReportDirectory(input.command_name);
 
       // 3. Generate filename
       const fileName = this.generateFileName(input.command_name, input.report_name);
 
-      // 4. Resolve version conflicts
+      // 4. Resolve version conflicts (determine final filename)
       const { finalPath, hadConflict, version } = await this.resolveVersionConflict(reportDir, fileName);
-
-      // 5. Write file atomically
-      await this.writeFileAtomic(finalPath, input.report_content);
-
-      // 6. Set permissions
-      await this.setFilePermissions(finalPath);
-
-      // 7. Sync to remote database (after successful file write)
       const reportName = path.basename(finalPath);
-      let syncStatus: 'success' | 'failed' | 'skipped' = 'skipped';
-      let syncError: string | undefined;
 
-      if (this.syncer.isEnabled() && input.owner) {
-        const syncResult = await this.syncer.sync(
-          input.command_name,
+      // 5. SYNC FIRST - Execute sync BEFORE file upload
+      const syncResult = await this.syncer.sync(
+        input.command_name,
+        reportName,
+        input.owner
+      );
+
+      // 6. Check sync result - if failed, stop file upload
+      if (!syncResult.success) {
+        const syncMessage = ReportSyncer.formatSyncResultForDisplay(syncResult);
+        
+        logger.error('Report upload aborted due to sync failure', new Error(syncMessage), {
+          command: input.command_name,
           reportName,
-          input.owner
-        );
-        syncStatus = syncResult.success ? 'success' : 'failed';
-        syncError = syncResult.error;
-      } else if (!this.syncer.isEnabled()) {
-        logger.debug('Sync skipped: mcp_server_domain not configured');
-      } else if (!input.owner) {
-        logger.debug('Sync skipped: owner not provided');
+          syncResult,
+        });
+
+        // Return failure with detailed sync information
+        return {
+          success: false,
+          report_path: '',
+          report_name: reportName,
+          message: syncMessage,
+          sync_status: 'failed',
+          sync_error: syncResult.final_error || syncResult.precondition_error,
+          database_sync: {
+            status: 'failed',
+            message: syncMessage,
+          },
+        };
       }
 
-      // 8. Generate result with conflict notification
+      // 7. Sync succeeded - now write file atomically
+      await this.writeFileAtomic(finalPath, input.report_content);
+
+      // 8. Set permissions
+      await this.setFilePermissions(finalPath);
+
+      // 9. Generate result
       const link = this.generateLink(finalPath);
+      const syncMessage = ReportSyncer.formatSyncResultForDisplay(syncResult);
       
-      // Build message based on upload and sync status
       let message = 'Report uploaded successfully';
       if (hadConflict) {
         message = `Report uploaded successfully (filename conflict detected, saved as _v${version})`;
       }
-      if (syncStatus === 'success') {
-        message += ', database sync completed';
-      } else if (syncStatus === 'failed') {
-        message += `. Warning: File saved but database sync failed - ${syncError}`;
-      }
+      message += `\n${syncMessage}`;
 
       logger.info('Report uploaded successfully', {
         command: input.command_name,
@@ -91,7 +103,7 @@ export class ReportUploader {
         size: input.report_content.length,
         version,
         hadConflict,
-        syncStatus,
+        syncAttempts: syncResult.total_attempts,
       });
 
       return {
@@ -101,8 +113,11 @@ export class ReportUploader {
         report_link: link,
         message,
         version,
-        sync_status: syncStatus,
-        sync_error: syncError,
+        sync_status: 'success',
+        database_sync: {
+          status: 'success',
+          message: syncMessage,
+        },
       };
     } catch (error) {
       logger.error('Report upload failed', error as Error, {
@@ -374,4 +389,3 @@ export class ReportUploader {
     return `${baseUrl}${urlPath}`;
   }
 }
-

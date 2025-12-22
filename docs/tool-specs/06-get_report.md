@@ -203,3 +203,4 @@ Typical usage pattern:
 - `list_command_reports`: List all reports for a command
 - `get_command`: Get the command that generates these reports
 
+

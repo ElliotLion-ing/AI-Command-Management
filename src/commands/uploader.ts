@@ -1,6 +1,7 @@
 /**
  * Command uploader module
  * Handles command file uploads with validation, and atomic operations
+ * Per Sync-Mechanism-Requirements.md: Sync BEFORE file upload, stop on failure
  */
 
 import * as fs from 'fs/promises';
@@ -31,6 +32,7 @@ export class CommandUploader {
 
   /**
    * Upload a command to the filesystem
+   * IMPORTANT: Sync is performed BEFORE file upload per requirements
    */
   async upload(input: UploadCommandInput): Promise<UploadCommandOutput> {
     try {
@@ -61,47 +63,59 @@ export class CommandUploader {
         isUpdate = false;
       }
 
-      // 6. Write file atomically
+      // 6. SYNC FIRST - Execute sync BEFORE file upload
+      const syncResult = await this.syncer.sync(
+        input.command_name,
+        input.version,
+        input.owner,
+        input.release_note,
+        input.description
+      );
+
+      // 7. Check sync result - if failed, stop file upload
+      if (!syncResult.success) {
+        const syncMessage = CommandSyncer.formatSyncResultForDisplay(syncResult);
+        
+        logger.error('Command upload aborted due to sync failure', new Error(syncMessage), {
+          command: input.command_name,
+          version: input.version,
+          syncResult,
+        });
+
+        // Return failure with detailed sync information
+        return {
+          success: false,
+          command_path: '',
+          command_name: fileName,
+          message: syncMessage,
+          is_update: isUpdate,
+          version: input.version,
+          sync_status: 'failed',
+          sync_error: syncResult.final_error || syncResult.precondition_error,
+          database_sync: {
+            status: 'failed',
+            message: syncMessage,
+          },
+        };
+      }
+
+      // 8. Sync succeeded - now write file atomically
       await this.writeFileAtomic(filePath, input.command_content);
 
-      // 7. Set permissions
+      // 9. Set permissions
       await this.setFilePermissions(filePath);
 
-      // 8. Sync to remote database (after successful file write)
-      let syncStatus: 'success' | 'failed' | 'skipped' = 'skipped';
-      let syncError: string | undefined;
-
-      if (this.syncer.isEnabled() && input.owner) {
-        const syncResult = await this.syncer.sync(
-          input.command_name,
-          input.version,
-          input.owner,
-          input.release_note,
-          input.description
-        );
-        syncStatus = syncResult.success ? 'success' : 'failed';
-        syncError = syncResult.error;
-      } else if (!this.syncer.isEnabled()) {
-        logger.debug('Sync skipped: mcp_server_domain not configured');
-      } else if (!input.owner) {
-        logger.debug('Sync skipped: owner not provided');
-      }
-
-      // 9. Build result message
+      // 10. Build result message
       const action = isUpdate ? 'updated' : 'uploaded';
-      let message = `Command ${action} successfully`;
-      if (syncStatus === 'success') {
-        message += ', database sync completed';
-      } else if (syncStatus === 'failed') {
-        message += `. Warning: File saved but database sync failed - ${syncError}`;
-      }
+      const syncMessage = CommandSyncer.formatSyncResultForDisplay(syncResult);
+      const message = `Command ${action} successfully\n${syncMessage}`;
 
       logger.info(`Command ${action} successfully`, {
         command: input.command_name,
         path: filePath,
         version: input.version,
         isUpdate,
-        syncStatus,
+        syncAttempts: syncResult.total_attempts,
       });
 
       return {
@@ -111,8 +125,11 @@ export class CommandUploader {
         message,
         is_update: isUpdate,
         version: input.version,
-        sync_status: syncStatus,
-        sync_error: syncError,
+        sync_status: 'success',
+        database_sync: {
+          status: 'success',
+          message: syncMessage,
+        },
       };
     } catch (error) {
       logger.error('Command upload failed', error as Error, {
@@ -196,7 +213,7 @@ export class CommandUploader {
       );
     }
 
-    // Validate owner if provided
+    // Validate owner if provided (will be checked again in sync preconditions)
     if (input.owner && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.owner)) {
       throw new CommandUploadError(
         'Invalid owner email format',
@@ -265,4 +282,3 @@ export class CommandUploader {
     }
   }
 }
-
