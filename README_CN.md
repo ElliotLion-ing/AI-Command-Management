@@ -1292,9 +1292,20 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
   "version": "0.0.1",
   "owner": "user@example.com",
   "description": "新命令的描述",
-  "release_note": "更新的发布说明"
+  "release_note": "更新的发布说明",
+  "belong_to": ""
 }
 ```
+
+| 参数 | 类型 | 必需 | 描述 |
+|-----|------|------|------|
+| `command_name` | string | ✅ | 命令名称（带或不带 .md）|
+| `command_content` | string | ✅ | 完整的 markdown 内容 |
+| `version` | string | ✅ | 语义化版本（如 "0.0.1"）|
+| `owner` | string | ✅ | 用户邮箱（自动从 Cursor 获取）|
+| `belong_to` | string | ❌ | 依赖文件的主命令名称 |
+| `description` | string | ❌ | 描述（用于新命令）|
+| `release_note` | string | ❌ | 发布说明（用于更新）|
 
 **功能特性**：
 - ✅ 上传新命令或更新已有命令
@@ -1303,6 +1314,7 @@ SSE 服务器现在实现了心跳机制，每 30 秒发送周期性的保活事
 - ✅ 所有者跟踪（自动从 Cursor 检测）
 - ✅ 文件名验证和规范化
 - ✅ 命令命名规范强制检查
+- ✅ 通过 `belong_to` 字段支持依赖关系
 
 ### 命令命名规范 🆕
 命令必须遵循特定的命名格式以保持一致性：
