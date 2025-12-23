@@ -1103,7 +1103,7 @@ Built with:
 
 ---
 
-**Version**: 0.5.0  
+**Version**: 0.5.1  
 **Last Updated**: 2025-12-23
 
 ---
@@ -1346,7 +1346,7 @@ If a name is invalid, the AI will:
 
 ---
 
-## 🆕 What's New in v0.5.0
+## 🆕 What's New in v0.5.1
 
 ### Command Dependency Upload Support 🆕
 Commands can now be uploaded with their dependency relationships. The system automatically detects file types and handles upload order correctly.
