@@ -1295,20 +1295,9 @@ A new tool for uploading and updating command files. This enables centralized co
   "version": "0.0.1",
   "owner": "user@example.com",
   "description": "Description for new commands",
-  "release_note": "Release notes for updates",
-  "belong_to": ""
+  "release_note": "Release notes for updates"
 }
 ```
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `command_name` | string | ✅ | Command name (with or without .md) |
-| `command_content` | string | ✅ | Full markdown content |
-| `version` | string | ✅ | Semantic version (e.g., "0.0.1") |
-| `owner` | string | ✅ | User email (auto-detected from Cursor) |
-| `belong_to` | string | ❌ | Parent command name for dependency files |
-| `description` | string | ❌ | Description (for new commands) |
-| `release_note` | string | ❌ | Release notes (for updates) |
 
 **Features**:
 - ✅ Upload new commands or update existing ones
@@ -1317,7 +1306,6 @@ A new tool for uploading and updating command files. This enables centralized co
 - ✅ Owner tracking with auto-detection from Cursor
 - ✅ File name validation and normalization
 - ✅ Command naming convention enforcement
-- ✅ Dependency relationship support via `belong_to` field
 
 ### Command Naming Convention 🆕
 Commands must follow a specific naming format for consistency:
@@ -1376,7 +1364,14 @@ Commands can now be uploaded with their dependency relationships. The system aut
 | Single main + dependencies | ✅ | Upload deps first, then main |
 | Multiple main + multiple deps | ❌ | Must upload in batches (1 main + its deps per batch) |
 
-**Request Body Enhancement**:
+**New Parameter: `belong_to`**:
+The `upload_command` tool now accepts a new optional parameter:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `belong_to` | string | ❌ | Parent command name for dependency files (with .md suffix). Leave empty for main files. |
+
+**Sync API Request Body Enhancement**:
 The sync API request now includes a `belongTo` field:
 - **Main files**: `belongTo = ""` (empty)
 - **Dependency files**: `belongTo = "parent-command.md"` (with .md suffix)
