@@ -1103,8 +1103,8 @@ Built with:
 
 ---
 
-**Version**: 0.4.0  
-**Last Updated**: 2025-12-16
+**Version**: 0.5.0  
+**Last Updated**: 2025-12-23
 
 ---
 
@@ -1343,3 +1343,54 @@ If a name is invalid, the AI will:
 | `enable_command_upload` | boolean | true | Enable/disable command upload feature |
 | `command_upload_max_size_mb` | number | 5 | Maximum command file size in MB |
 | `command_file_permissions` | string | "644" | File permissions for uploaded commands |
+
+---
+
+## 🆕 What's New in v0.5.0
+
+### Command Dependency Upload Support 🆕
+Commands can now be uploaded with their dependency relationships. The system automatically detects file types and handles upload order correctly.
+
+**How It Works**:
+1. **File Type Detection**: Checks if markdown file contains `is_dependency: true` in the first 3 lines
+2. **Automatic Analysis**: When uploading, the system analyzes main file content to detect dependency references
+3. **Smart Upload Order**: Dependencies are uploaded FIRST, then main files
+
+**Supported Scenarios**:
+| Scenario | Supported | Behavior |
+|----------|-----------|----------|
+| Single main file (no deps) | ✅ | Auto-analyze content for dependency references |
+| Multiple main files (no deps) | ✅ | Upload all together |
+| Single main + dependencies | ✅ | Upload deps first, then main |
+| Multiple main + multiple deps | ❌ | Must upload in batches (1 main + its deps per batch) |
+
+**Request Body Enhancement**:
+The sync API request now includes a `belongTo` field:
+- **Main files**: `belongTo = ""` (empty)
+- **Dependency files**: `belongTo = "parent-command.md"` (with .md suffix)
+
+### Pre-Upload Validation 🆕
+Before uploading main + dependency files together:
+1. Validates ALL dependency file names for `{Module}-xx-yy-zz` convention
+2. If any dependency needs renaming:
+   - STOPS the upload process
+   - Notifies user: "依赖文件 {old_name} 需要重命名为 {new_name}"
+   - Asks user to update references in main file first
+3. After user confirms changes, retry upload
+
+**Example Workflow**:
+```
+User: Upload Main-Command.md with Utils.md
+AI: Detects Utils.md needs renaming to Dep-Utils.md
+AI: "依赖文件命名不符合规范：
+     Utils.md → Dep-Utils.md
+     请先修改主文件中对 Utils 的引用为 Dep-Utils"
+User: Updates Main-Command.md, confirms
+AI: Uploads Dep-Utils.md first, then Main-Command.md
+```
+
+### Automatic Dependency Detection 🆕
+When uploading a single main file, the AI now:
+1. Analyzes file content for dependency references (e.g., `@include`, `[[xxx.md]]`)
+2. If dependencies detected: Asks user "检测到文件中引用了依赖: xxx.md，是否需要一起上传?"
+3. If no dependencies detected: Uploads directly without asking

@@ -359,40 +359,60 @@ class ACMTSSEServer {
           },
           {
             name: 'upload_command',
-            description: `Upload or update a command file. **WORKFLOW**:
-(1) **Auto-get user email FIRST** using sqlite3 command (see owner param). Only ask user if command fails.
-(2) If user wants to UPDATE existing command:
-    - Call list_commands to show available commands
-    - Ask user which command to update
-    - Ask for version bump type (patch/minor/major)
-    - Get the command file content (user provides or ask for it)
-    - If local filename differs from remote, notify user and use remote name
-    - Ask for releaseNote (optional)
-(3) If user wants to UPLOAD new command:
-    - Call list_commands to check if command already exists
-    - If exists, follow update flow (step 2)
-    - **VALIDATE NAMING CONVENTION** (see below)
-    - Ask for version (default 0.0.1 for new commands)
-    - Ask for description (optional)
-(4) Call this tool with all collected info.
+            description: `Upload or update a command file with dependency support. **WORKFLOW**:
 
-**NAMING CONVENTION** (MUST validate before upload):
-Format: {Module}-xx-yy-zz
-- Module: Technical module name (case flexible)
-- xx-yy-zz: Descriptive parts separated by "-"
-- NO SPACES allowed in any part
-- NO redundant suffixes like "-command" or "-analysis"
+**STEP 1: Auto-get user email**
+Run sqlite3 command (see owner param). Only ask user if command fails.
 
-✅ VALID: zNet-proxy-slow-meeting-join, ZMDB-log-analyze, SpeechSDK-log-analyze, Tool-code-review-self
-❌ INVALID: proxy-slow-meeting-analysis-command (missing Module prefix), Tool-code review-self (contains space)
+**STEP 2: Detect file type**
+Check if the markdown file's first 3 lines contain:
+\`\`\`
+---
+is_dependency: true
+---
+\`\`\`
+- If YES: This is a **dependency file**, must specify belong_to (parent command name)
+- If NO: This is a **main file**, check if it has dependencies
 
-If name is INVALID:
-1. Tell user: "当前命名不符合规则：{问题描述}"
-2. Explain the naming convention
-3. Auto-generate a valid name suggestion based on the content
-4. Ask user: "建议使用 {suggested_name}，是否同意？或请提供符合规则的名称。"
+**STEP 3: Handle file relationships**
+- **Single main file**: 
+  1. Analyze content for dependency references (look for patterns like \`@include\`, \`[[xxx.md]]\`, or mentions of other .md files)
+  2. If dependencies detected: Tell user "检测到文件中引用了依赖: xxx.md, yyy.md，是否需要一起上传?" → go to STEP 3a
+  3. If no dependencies detected: Upload directly without asking
+- **Multiple main files (no dependencies)**: ✅ SUPPORTED - Analyze each file for dependency references
+  - If NO dependencies found in any file: Upload all main files together
+  - If dependencies found: Ask user to upload separately (1 main + its deps per batch)
+- **Single main + dependencies**: ✅ SUPPORTED - go to STEP 3a, upload deps first then main
+- **Dependency file only**: Ask "请指定主文件名" → set belong_to
+- **Multiple main + Multiple dependencies**: ❌ REJECT - cannot determine which dep belongs to which main
+  - Tell user: "多个主文件和多个依赖文件无法一起上传，请分批上传：每批 [1个主文件 + 其依赖文件]"
 
-**VERSION FORMAT**: patch=x.y.z+1, minor=x.y+1.0, major=x+1.0.0. First version: 0.0.1`,
+**STEP 3a: CRITICAL - Collect dependency files**
+⚠️ **YOU MUST ASK USER TO PROVIDE ACTUAL DEPENDENCY FILES!**
+If user says there are dependency files:
+1. Ask user: "请提供依赖文件的路径或内容"
+2. **READ EACH DEPENDENCY FILE using read_file tool**
+3. Do NOT proceed until you have actual file content for ALL dependencies
+4. If user cannot provide files, ask if they want to upload main file only
+
+**PRE-UPLOAD VALIDATION (applies to ALL files)**:
+⚠️ Before uploading ANY file (main or dependency), validate filename:
+- Must follow {Module}-xx-yy-zz convention
+- If invalid, suggest valid name and ask user to confirm/rename
+
+**STEP 4: Upload order (IMPORTANT for main + dependencies)**
+⚠️ **CRITICAL**: When uploading main + dependency files together:
+1. First, validate ALL dependency file names for {Module}-xx-yy-zz convention
+2. If any dependency file needs renaming:
+   - STOP upload process
+   - Tell user: "依赖文件 {old_name} 需要重命名为 {new_name}"
+   - Ask user to update references in main file AND provide renamed dependency file
+   - After user confirms, **READ the updated files again**
+3. If all names valid: Upload dependency files FIRST, then main file
+4. **NEVER upload a file without actually reading its content first!**
+
+**NAMING CONVENTION**: {Module}-xx-yy-zz (e.g., zNet-proxy-slow-meeting-join)
+**VERSION FORMAT**: First version: 0.0.1, patch=x.y.z+1, minor=x.y+1.0, major=x+1.0.0`,
             inputSchema: {
               type: 'object',
               properties: {
@@ -411,6 +431,10 @@ If name is INVALID:
                 owner: {
                   type: 'string',
                   description: '**MUST AUTO-GET FIRST!** Run sqlite3 command based on OS: **macOS**: `sqlite3 ~/Library/Application\\ Support/Cursor/User/globalStorage/state.vscdb "SELECT value FROM ItemTable WHERE key=\'cursorAuth/cachedEmail\';"` **Windows**: `sqlite3 %APPDATA%\\Cursor\\User\\globalStorage\\state.vscdb "SELECT value FROM ItemTable WHERE key=\'cursorAuth/cachedEmail\';"` **Linux**: `sqlite3 ~/.config/Cursor/User/globalStorage/state.vscdb "SELECT value FROM ItemTable WHERE key=\'cursorAuth/cachedEmail\';"` Only ask user if command fails.',
+                },
+                belong_to: {
+                  type: 'string',
+                  description: 'Parent command name for dependency files (with .md suffix). Required if file contains "is_dependency: true" in header. Leave empty for main files.',
                 },
                 release_note: {
                   type: 'string',

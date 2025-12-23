@@ -344,12 +344,77 @@ export interface CommandSyncRequest {
   releaseNote: string;
   description: string;
   owner: string;
+  belongTo?: string;  // Parent command name for dependency files (with .md suffix)
 }
 
 export interface CommandSyncResponse {
   code: number;
   msg: string;
   data: unknown;
+}
+
+/**
+ * Command file type enumeration
+ */
+export type CommandFileType = 'main' | 'dependency';
+
+/**
+ * Command dependency detection result
+ */
+export interface CommandDependencyInfo {
+  file_type: CommandFileType;
+  is_dependency: boolean;
+  belong_to?: string;           // Parent command name (for dependency files)
+}
+
+/**
+ * Single file info for multi-file upload
+ */
+export interface CommandFileInfo {
+  name: string;                  // File name (with or without .md)
+  content: string;               // Full markdown content
+  file_type: CommandFileType;    // main or dependency
+  belong_to?: string;            // Parent command name (for dependency files)
+}
+
+/**
+ * Multi-file analysis result
+ */
+export interface MultiFileAnalysisResult {
+  scenario: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+  scenario_description: string;
+  main_files: CommandFileInfo[];
+  dependency_files: CommandFileInfo[];
+  can_proceed: boolean;
+  requires_user_input: boolean;
+  error_message?: string;
+  suggestion?: string;
+}
+
+/**
+ * File naming validation result
+ */
+export interface FileNamingValidation {
+  original_name: string;
+  is_valid: boolean;
+  suggested_name?: string;     // Suggested valid name if original is invalid
+  validation_error?: string;   // Why the name is invalid
+}
+
+/**
+ * Pre-upload validation result for multi-file uploads
+ * Used to detect naming issues BEFORE uploading
+ */
+export interface PreUploadValidationResult {
+  can_proceed: boolean;
+  requires_main_file_update: boolean;  // True if dependency files need renaming
+  dependency_renames: FileNamingValidation[];  // List of dependency files that need renaming
+  main_file_references_to_update: Array<{
+    main_file: string;
+    old_reference: string;
+    new_reference: string;
+  }>;
+  user_action_required?: string;  // Instructions for user
 }
 
 /**
@@ -363,6 +428,9 @@ export interface UploadCommandInput {
   release_note?: string;         // Release notes (for updates)
   description?: string;          // Description (for new commands)
   is_new_command?: boolean;      // Whether this is a new command or update
+  belong_to?: string;            // Parent command name for dependency files
+  // Multi-file upload fields
+  additional_files?: CommandFileInfo[];  // Additional files to upload together
 }
 
 export interface UploadCommandOutput {

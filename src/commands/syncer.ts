@@ -86,6 +86,12 @@ export class CommandSyncer {
   /**
    * Sync command metadata to remote server with retry mechanism
    * MUST be called BEFORE file upload
+   * @param commandName - Command name
+   * @param version - Semantic version
+   * @param owner - User email
+   * @param releaseNote - Release notes (optional)
+   * @param description - Description (optional)
+   * @param belongTo - Parent command name for dependency files (optional)
    * @returns SyncResult with detailed attempt history
    */
   async sync(
@@ -93,7 +99,8 @@ export class CommandSyncer {
     version: string,
     owner?: string,
     releaseNote?: string,
-    description?: string
+    description?: string,
+    belongTo?: string
   ): Promise<SyncResult> {
     // Step 1: Check preconditions (no retry on these failures)
     const preconditionResult = this.checkPreconditions(owner);
@@ -116,12 +123,19 @@ export class CommandSyncer {
       ? commandName 
       : `${commandName}.md`;
     
+    // Process belongTo: ensure it has .md suffix if provided
+    let belongToWithSuffix: string | undefined;
+    if (belongTo && belongTo.trim() !== '') {
+      belongToWithSuffix = belongTo.endsWith('.md') ? belongTo : `${belongTo}.md`;
+    }
+    
     const requestBody: CommandSyncRequest = {
       commandName: commandNameWithSuffix,
       version,
       owner: owner!,
       releaseNote: releaseNote || '',
       description: description || '',
+      belongTo: belongToWithSuffix || '',
     };
 
     logger.info('Starting command sync with retry mechanism', {
@@ -129,6 +143,7 @@ export class CommandSyncer {
       commandName: commandNameWithSuffix,
       version,
       owner,
+      belongTo: belongToWithSuffix || '(main file)',
       maxAttempts: this.retryConfig.max_retries + 1,
     });
 
