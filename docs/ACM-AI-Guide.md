@@ -1,28 +1,32 @@
 # ACM (AI Command Management) - 使用指南
 
-> **本文档供 AI 阅读，用于指导 AI 如何帮助用户使用 ACM 系统**
+> **本文档供 AI 阅读，用于回答用户关于 ACM 系统的问题**
 
 ---
 
-## 📋 目录
+## 📋 快速索引
 
-1. [快速配置](#快速配置)
-2. [Web 管理界面](#web-管理界面)
-3. [如何创建命令文件](#如何创建命令文件)
-4. [工具使用指南](#工具使用指南)
-5. [常见场景示例](#常见场景示例)
+| 用户问题 | 跳转章节 |
+|---------|---------|
+| 如何配置/使用 ACM？ | [快速配置](#快速配置) |
+| 在哪里查看已上传的内容？ | [Web 管理界面](#web-管理界面) |
+| 创建 command 文件有什么规则？ | [Command 文件规则](#command-文件规则) |
+| 如何创建子命令/依赖文件？ | [子命令创建规则](#子命令依赖文件) |
+| 如何上传 command？ | [上传 Command](#上传-command) |
+| 如何上传 report？ | [上传 Report](#上传-report) |
+| 如何搜索/查看内容？ | [查询操作](#查询操作) |
 
 ---
 
 ## 快速配置
 
-### 🔧 在 Cursor 中配置 ACM
+### Q: 如何配置 ACM？
 
-用户只需在 Cursor 的 MCP 配置文件中添加以下内容即可使用 ACM：
+在 Cursor 的 MCP 配置文件中添加配置即可。
 
 **配置文件位置**：`~/.cursor/mcp.json`
 
-**开发环境配置**：
+**开发环境**：
 ```json
 {
   "mcpServers": {
@@ -34,7 +38,7 @@
 }
 ```
 
-**生产环境配置**：
+**生产环境**：
 ```json
 {
   "mcpServers": {
@@ -46,13 +50,13 @@
 }
 ```
 
-配置完成后重启 Cursor，即可使用 ACM 的所有功能。
+配置完成后**重启 Cursor** 即可使用。
 
 ---
 
 ## Web 管理界面
 
-用户可以在浏览器中查看已上传的 Command 和 Report：
+### Q: 在哪里查看已上传的 Command 和 Report？
 
 | 环境 | 地址 |
 |------|------|
@@ -61,13 +65,34 @@
 
 ---
 
-## 如何创建命令文件
+## Command 文件规则
 
-### 📄 主命令文件
+### Q: 创建 command 文件有哪些规则需要遵守？
 
-主命令是独立的命令文件，用户直接使用。
+#### ✅ 规则 1：命名规范
 
-**文件格式**：普通 Markdown 文件，无需特殊标记
+**格式**：`{Module}-xx-yy-zz.md`
+
+| 部分 | 说明 | 示例 |
+|------|------|------|
+| `{Module}` | 技术模块名称，首字母建议大写 | zNet, ZMDB, SpeechSDK, Tool |
+| `xx-yy-zz` | 用 `-` 分隔的描述，不能有空格 | proxy-slow-meeting-join |
+
+**正确示例**：
+- ✅ `zNet-proxy-slow-meeting-join.md`
+- ✅ `ZMDB-log-analyze.md`
+- ✅ `SpeechSDK-decode-timeout-check.md`
+- ✅ `Tool-code-review-self.md`
+
+**错误示例**：
+- ❌ `proxy-slow-meeting.md` → 缺少 Module 前缀
+- ❌ `Tool-code review.md` → 包含空格
+- ❌ `zNet-proxy-command.md` → 冗余后缀 `-command`
+- ❌ `zNet-proxy-analysis.md` → 冗余后缀 `-analysis`
+
+#### ✅ 规则 2：文件格式
+
+Command 文件是标准 Markdown 格式：
 
 ```markdown
 # 命令标题
@@ -78,14 +103,31 @@
 ## 使用步骤
 1. 第一步
 2. 第二步
-...
+
+## 注意事项
+- 注意点 1
+- 注意点 2
 ```
 
-### 📄 子命令（依赖文件）
+#### ✅ 规则 3：版本号
 
-子命令是被主命令引用的辅助文件。**必须在文件开头添加特殊标记**。
+- **新建命令**：版本从 `0.0.1` 开始
+- **更新命令**：
+  - patch（小修复）：0.0.1 → 0.0.2
+  - minor（新功能）：0.0.1 → 0.1.0
+  - major（大改动）：0.0.1 → 1.0.0
 
-**⚠️ 关键：子命令必须包含以下 frontmatter**
+---
+
+## 子命令（依赖文件）
+
+### Q: 如何创建子命令/依赖文件？
+
+子命令是被主命令引用的辅助文件。
+
+#### ✅ 规则 1：必须添加 frontmatter 标记
+
+**⚠️ 关键**：子命令文件**必须**在开头添加以下内容：
 
 ```markdown
 ---
@@ -94,14 +136,37 @@ is_dependency: true
 
 # 子命令标题
 
-这是一个被主命令引用的辅助文件...
+子命令内容...
 ```
 
-**判定规则**：
-- 文件**前 3 行**包含 `is_dependency: true` → 识别为子命令
-- 未包含此标记 → 识别为主命令
+#### ✅ 规则 2：判定逻辑
 
-### 📄 主+子命令组合示例
+| 文件开头 | 判定结果 |
+|---------|---------|
+| 前 3 行包含 `is_dependency: true` | → 子命令 |
+| 不包含此标记 | → 主命令 |
+
+#### ✅ 规则 3：命名规范
+
+子命令同样需要遵循 `{Module}-xx-yy-zz.md` 格式。
+
+### Q: 主命令如何引用子命令？
+
+在主命令中使用 `[[子命令名.md]]` 格式引用：
+
+```markdown
+# 主命令标题
+
+## 依赖
+- [[zNet-log-type-identification.md]]
+- [[zNet-proxy-thread-identification.md]]
+
+## 分析步骤
+1. 首先识别日志类型（参考子命令）
+2. 然后识别 proxy 线程
+```
+
+### Q: 完整的主+子命令示例？
 
 **主命令 `zNet-proxy-slow-meeting-join.md`**：
 ```markdown
@@ -112,9 +177,8 @@ is_dependency: true
 - [[zNet-proxy-thread-identification.md]]
 
 ## 分析步骤
-1. 首先识别日志类型（参考子命令）
+1. 首先识别日志类型
 2. 然后识别 proxy 线程
-...
 ```
 
 **子命令 `zNet-log-type-identification.md`**：
@@ -128,7 +192,6 @@ is_dependency: true
 ## Log 类型判断
 - 类型 A: 包含 xxx 关键字
 - 类型 B: 包含 yyy 关键字
-...
 ```
 
 **子命令 `zNet-proxy-thread-identification.md`**：
@@ -144,284 +207,185 @@ is_dependency: true
 - 模式 2: ...
 ```
 
-### 📝 命令命名规范
-
-所有命令文件必须遵循 `{Module}-xx-yy-zz` 格式：
-
-| 组成部分 | 说明 | 示例 |
-|---------|------|------|
-| `{Module}` | 技术模块名称 | zNet, ZMDB, SpeechSDK, Tool |
-| `xx-yy-zz` | 用 `-` 分隔的描述 | proxy-slow-meeting-join |
-
-**✅ 正确命名**：
-- `zNet-proxy-slow-meeting-join`
-- `ZMDB-log-analyze`
-- `SpeechSDK-decode-timeout-check`
-- `Tool-code-review-self`
-
-**❌ 错误命名**：
-- `proxy-slow-meeting` （缺少 Module 前缀）
-- `Tool-code review` （包含空格）
-- `zNet-proxy-slow-meeting-command` （冗余后缀 -command）
-
 ---
 
-## 工具使用指南
+## 上传 Command
 
-### 🔑 用户邮箱获取
+### Q: 如何上传 command 文件？
 
-上传操作需要用户邮箱。**AI 必须先自动获取，失败后才询问用户**：
+#### 上传单个主命令
 
-```bash
-# macOS
-sqlite3 ~/Library/Application\ Support/Cursor/User/globalStorage/state.vscdb \
-  "SELECT value FROM ItemTable WHERE key='cursorAuth/cachedEmail';"
+1. 准备好符合命名规范的 .md 文件
+2. 告诉 AI："帮我上传 @MyCommand.md"
+3. AI 会自动：
+   - 检查命名规范
+   - 获取你的邮箱
+   - 执行上传
 
-# Windows
-sqlite3 %APPDATA%\Cursor\User\globalStorage\state.vscdb \
-  "SELECT value FROM ItemTable WHERE key='cursorAuth/cachedEmail';"
+#### 上传主命令 + 子命令
 
-# Linux
-sqlite3 ~/.config/Cursor/User/globalStorage/state.vscdb \
-  "SELECT value FROM ItemTable WHERE key='cursorAuth/cachedEmail';"
-```
+1. 准备好所有文件：
+   - 主命令：普通 markdown
+   - 子命令：开头添加 `is_dependency: true`
+2. 告诉 AI："帮我上传主命令和它的依赖文件"
+3. AI 会自动：
+   - 检查所有文件命名规范
+   - **如果子命令需要重命名**：
+     - 停止流程
+     - 提示你修改主命令中的引用
+   - 先上传子命令（设置 `belong_to` 参数）
+   - 再上传主命令
 
----
+### Q: 上传时需要提供什么信息？
 
-### 1. `search_commands` - 搜索命令
-
-**用途**：根据关键词查找命令
-
-**参数**：
-| 参数 | 必需 | 描述 |
+| 信息 | 必需 | 说明 |
 |------|------|------|
-| `query` | ✅ | 搜索关键词 |
-| `max_results` | ❌ | 最大结果数（默认 10）|
+| 文件内容 | ✅ | 完整的 markdown 内容 |
+| 命令名称 | ✅ | 符合 {Module}-xx-yy-zz 格式 |
+| 版本号 | ✅ | 新建用 0.0.1 |
+| 邮箱 | ✅ | AI 会自动获取 |
+| 描述 | ❌ | 新建时可选 |
+| 发布说明 | ❌ | 更新时可选 |
 
-**示例**：
+---
+
+## 上传 Report
+
+### Q: 如何上传分析报告？
+
+1. 告诉 AI："帮我上传这个分析报告"
+2. AI 会：
+   - 确认目标 command 文件夹存在
+   - 获取你的邮箱
+   - 询问确认："将报告上传到 [xxx] 文件夹，确认？"
+3. 你确认后，AI 执行上传
+
+### Q: 上传报告有什么规则？
+
+| 规则 | 说明 |
+|------|------|
+| 目标文件夹 | 必须是已存在的 command 文件夹 |
+| 文件名 | 使用你提供的原始文件名 |
+| 冲突处理 | 同名文件会自动添加 _v1, _v2 后缀 |
+
+---
+
+## 查询操作
+
+### Q: 如何搜索 command？
+
+直接告诉 AI 你要找什么：
+- "有没有分析 proxy 慢会议的工具？"
+- "找一个分析 speech SDK 日志的命令"
+
+### Q: 如何查看 command 内容？
+
+- "显示 zNet-proxy-slow-meeting-join 的详细内容"
+- "获取这个命令的完整定义"
+
+### Q: 如何查看历史报告？
+
+- "看看之前有什么 speech SDK 的分析报告"
+- "列出 zNet-proxy-slow-meeting-join 的所有报告"
+
+### Q: 如何获取报告内容？
+
+- "获取这个报告的完整内容"
+- "显示报告 xxx_20251223.md 的详情"
+
+---
+
+## 常见问题
+
+### Q: 命名不符合规范怎么办？
+
+AI 会自动检测并提示：
+1. 告诉你哪里不符合规范
+2. 建议一个符合规范的新名称
+3. 询问你是否同意使用新名称
+
+### Q: 子命令忘记添加 frontmatter 会怎样？
+
+没有 `is_dependency: true` 标记的文件会被识别为主命令，无法建立正确的依赖关系。
+
+### Q: 可以创建自定义的 report 文件夹吗？
+
+不可以。报告只能上传到已存在的 command 文件夹下。
+
+### Q: 邮箱需要手动输入吗？
+
+不需要。AI 会自动从 Cursor 获取你的登录邮箱，只有获取失败时才会询问你。
+
+---
+
+## 工具参数参考
+
+### search_commands
 ```json
-{ "query": "proxy slow meeting", "max_results": 5 }
+{ "query": "关键词", "max_results": 10 }
 ```
 
----
-
-### 2. `get_command` - 获取命令详情
-
-**用途**：获取命令的完整内容
-
-**参数**：
-| 参数 | 必需 | 描述 |
-|------|------|------|
-| `command_name` | ✅ | 命令名称（不需要 .md）|
-
-**示例**：
+### get_command
 ```json
-{ "command_name": "zNet-proxy-slow-meeting-join" }
+{ "command_name": "命令名（不需要.md）" }
 ```
 
----
-
-### 3. `list_commands` - 列出所有命令
-
-**用途**：查看所有可用命令列表
-
-**参数**：
-| 参数 | 必需 | 描述 |
-|------|------|------|
-| `page` | ❌ | 页码（默认 1）|
-| `page_size` | ❌ | 每页数量（默认 50）|
-
-**示例**：
+### list_commands
 ```json
-{ "page": 1, "page_size": 20 }
+{ "page": 1, "page_size": 50 }
 ```
 
----
-
-### 4. `upload_command` - 上传/更新命令
-
-**用途**：上传新命令或更新已有命令
-
-**参数**：
-| 参数 | 必需 | 描述 |
-|------|------|------|
-| `command_name` | ✅ | 命令名称 |
-| `command_content` | ✅ | 完整 markdown 内容 |
-| `version` | ✅ | 版本号（新建用 "0.0.1"）|
-| `owner` | ✅ | 用户邮箱（先自动获取）|
-| `belong_to` | ❌ | 子命令的主命令名（带 .md）|
-| `description` | ❌ | 描述（新建时）|
-| `release_note` | ❌ | 发布说明（更新时）|
-| `is_new_command` | ❌ | 是否为新命令 |
-
-**版本规则**：
-- 新命令：`0.0.1`
-- patch：x.y.z → x.y.(z+1)
-- minor：x.y.z → x.(y+1).0
-- major：x.y.z → (x+1).0.0
-
----
-
-### 5. `search_reports` - 搜索报告
-
-**用途**：搜索历史分析报告
-
-**参数**：
-| 参数 | 必需 | 描述 |
-|------|------|------|
-| `query` | ✅ | 搜索关键词 |
-| `command_filter` | ❌ | 限定特定命令 |
-| `max_results` | ❌ | 最大结果数（默认 10）|
-
-**示例**：
-```json
-{ "query": "decode timeout", "command_filter": "SpeechSDK-log-analyze" }
-```
-
----
-
-### 6. `list_command_reports` - 列出命令的报告
-
-**用途**：查看某命令下的所有报告
-
-**参数**：
-| 参数 | 必需 | 描述 |
-|------|------|------|
-| `command_name` | ✅ | 命令名称 |
-
-**示例**：
-```json
-{ "command_name": "zNet-proxy-slow-meeting-join" }
-```
-
----
-
-### 7. `get_report` - 获取报告内容
-
-**用途**：获取报告的完整内容
-
-**参数**：
-| 参数 | 必需 | 描述 |
-|------|------|------|
-| `command_name` | ✅ | 报告所属命令 |
-| `report_name` | ✅ | 报告文件名 |
-
-**示例**：
-```json
-{ "command_name": "zNet-proxy-slow-meeting-join", "report_name": "分析报告_20251223.md" }
-```
-
----
-
-### 8. `report_feedback` - 上传报告
-
-**用途**：将分析报告上传到服务器
-
-**参数**：
-| 参数 | 必需 | 描述 |
-|------|------|------|
-| `command_name` | ✅ | 报告所属命令（必须已存在）|
-| `report_content` | ✅ | 完整报告内容 |
-| `report_name` | ❌ | 报告文件名（用原始名）|
-| `user_wants_upload` | ✅ | true=上传，false=仅本地 |
-| `owner` | ❌ | 用户邮箱（先自动获取）|
-
-**示例**：
+### upload_command
 ```json
 {
-  "command_name": "zNet-proxy-slow-meeting-join",
-  "report_content": "# 分析报告\n\n...",
-  "report_name": "proxy分析_20251223.md",
+  "command_name": "命令名",
+  "command_content": "markdown内容",
+  "version": "0.0.1",
+  "owner": "邮箱",
+  "belong_to": "主命令名.md（子命令需要）",
+  "description": "描述（新建时）",
+  "release_note": "发布说明（更新时）"
+}
+```
+
+### search_reports
+```json
+{ "query": "关键词", "command_filter": "限定命令", "max_results": 10 }
+```
+
+### list_command_reports
+```json
+{ "command_name": "命令名" }
+```
+
+### get_report
+```json
+{ "command_name": "命令名", "report_name": "报告文件名" }
+```
+
+### report_feedback
+```json
+{
+  "command_name": "目标命令",
+  "report_content": "报告内容",
+  "report_name": "报告文件名",
   "user_wants_upload": true,
-  "owner": "user@example.com"
+  "owner": "邮箱"
 }
 ```
 
 ---
 
-## 常见场景示例
+## 规则速查表
 
-### 场景 1：用户想查找分析工具
-
-```
-用户：有没有分析 proxy 慢会议的工具？
-
-AI 操作：
-1. 调用 search_commands { query: "proxy slow meeting" }
-2. 展示搜索结果给用户
-3. 用户选择后调用 get_command 获取完整内容
-```
-
-### 场景 2：用户想上传一个主命令
-
-```
-用户：帮我上传 @MyCommand.md
-
-AI 操作：
-1. 读取文件内容
-2. 检查命名是否符合 {Module}-xx-yy-zz 规范
-   - 不符合 → 建议新名称，用户确认
-3. 运行 sqlite3 命令获取用户邮箱
-4. 调用 upload_command 上传
-```
-
-### 场景 3：用户想创建主+子命令组合
-
-```
-用户：我想创建一个复杂命令，有主文件和两个子文件
-
-AI 指导：
-1. 主文件：正常写 markdown，引用子文件
-2. 子文件：必须在开头添加 frontmatter
-   ---
-   is_dependency: true
-   ---
-3. 所有文件名必须符合 {Module}-xx-yy-zz 格式
-
-上传步骤：
-1. 检查所有文件名规范
-2. 如果子文件需要重命名：
-   - 停止流程
-   - 提示用户修改主文件中的引用
-3. 先上传子文件（设置 belong_to 参数）
-4. 再上传主文件
-```
-
-### 场景 4：用户想上传分析报告
-
-```
-用户：帮我上传这个分析报告
-
-AI 操作：
-1. 调用 list_commands 确认目标文件夹存在
-2. 运行 sqlite3 命令获取用户邮箱
-3. 确认："将报告[xxx.md]上传到[command]文件夹，确认？"
-4. 用户确认后调用 report_feedback
-```
-
-### 场景 5：用户想查看历史报告
-
-```
-用户：看看之前 speech SDK 相关的分析报告
-
-AI 操作：
-1. 调用 search_reports { query: "speech SDK" }
-2. 展示结果，用户选择
-3. 调用 get_report 获取完整内容
-```
-
----
-
-## ⚠️ 关键注意事项
-
-| 事项 | 说明 |
+| 类别 | 规则 |
 |------|------|
-| **子命令标记** | 必须在文件前 3 行包含 `is_dependency: true` |
-| **命名规范** | 所有文件必须符合 `{Module}-xx-yy-zz` 格式 |
-| **邮箱获取** | 必须先自动获取，失败后才询问用户 |
-| **上传顺序** | 子命令必须在主命令之前上传 |
-| **报告文件夹** | 只能上传到已存在的命令文件夹 |
-| **原始文件名** | 报告上传使用用户原始文件名 |
+| **命名格式** | `{Module}-xx-yy-zz.md` |
+| **子命令标记** | 文件开头必须有 `is_dependency: true` |
+| **新建版本** | 从 `0.0.1` 开始 |
+| **上传顺序** | 子命令先于主命令 |
+| **报告目标** | 只能上传到已存在的 command 文件夹 |
+| **邮箱获取** | AI 自动获取，失败才询问 |
 
 ---
 
